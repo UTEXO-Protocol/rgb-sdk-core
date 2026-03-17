@@ -1,0 +1,74 @@
+{
+  "name": "@utexo/rgb-sdk-core",
+  "version": "0.1.0",
+  "description": "Shared core for RGB SDK — platform-agnostic interfaces, types, and business logic",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.cjs",
+    "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.cjs --coverage",
+    "lint": "eslint \"**/*.{js,ts}\"",
+    "prettier": "prettier --write \"**/*.{js,ts}\"",
+    "version:patch": "npm version patch && git push && git push --tags && npm publish --access public",
+    "version:minor": "npm version minor && git push && git push --tags && npm publish --access public",
+    "version:major": "npm version major && git push && git push --tags && npm publish --access public"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.1",
+    "@noble/secp256k1": "3.0.0",
+    "@scure/bip32": "^2.0.1",
+    "@scure/bip39": "^2.0.1",
+    "axios": "^1.8.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.17.2",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.4.6",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2"
+  },
+  "keywords": [
+    "rgb",
+    "rgb-protocol",
+    "bitcoin",
+    "sdk",
+    "core",
+    "utexo",
+    "taproot",
+    "assets",
+    "blockchain"
+  ],
+  "license": "MIT",
+  "prettier": {
+    "quoteProps": "consistent",
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "useTabs": false
+  }
+}
