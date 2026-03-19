@@ -324,6 +324,7 @@ export abstract class UTEXOWalletCore
     password: string;
   }): Promise<WalletBackupResponse> {
     this.ensureInitialized();
+    this.layer1Wallet!.createBackup(params);
     return this.utexoWallet!.createBackup(params);
   }
 
