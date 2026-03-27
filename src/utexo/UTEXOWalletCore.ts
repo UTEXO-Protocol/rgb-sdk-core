@@ -75,8 +75,7 @@ import type { EstimateFeeResult } from '../crypto/types';
 
 export abstract class UTEXOWalletCore
   extends UTEXOProtocol
-  implements IWalletManager, IUTEXOProtocol
-{
+  implements IWalletManager, IUTEXOProtocol {
   protected readonly mnemonicOrSeed: string | Uint8Array;
   protected readonly options: ConfigOptions;
   protected readonly networkMap: UtxoNetworkMap;
@@ -324,6 +323,7 @@ export abstract class UTEXOWalletCore
     password: string;
   }): Promise<WalletBackupResponse> {
     this.ensureInitialized();
+    await this.layer1Wallet!.createBackup(params);
     return this.utexoWallet!.createBackup(params);
   }
 
