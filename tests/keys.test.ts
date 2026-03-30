@@ -8,7 +8,6 @@ import {
   getXpubFromXpriv,
   accountXpubsFromMnemonic,
   ValidationError,
-  CryptoError,
 } from '../dist/index.mjs';
 
 const testMnemonic =

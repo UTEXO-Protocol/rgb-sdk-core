@@ -15,15 +15,14 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "src",
     "README.md"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.cjs",
-    "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.cjs --coverage",
+    "test": "npm run build && NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.cjs",
+    "test:coverage": "npm run build && NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.cjs --coverage",
     "lint": "eslint \"**/*.{js,ts}\"",
     "prettier": "prettier --write \"**/*.{js,ts}\"",
     "version:patch": "npm version patch && git push && git push --tags && npm publish --access public",

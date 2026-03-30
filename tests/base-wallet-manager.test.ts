@@ -1,5 +1,9 @@
 import { jest } from '@jest/globals';
-import { BaseWalletManager, WalletError, ValidationError } from '../dist/index.mjs';
+import {
+  BaseWalletManager,
+  WalletError,
+  ValidationError,
+} from '../dist/index.mjs';
 
 // Minimal concrete subclass for testing
 class TestWalletManager extends BaseWalletManager {
@@ -8,8 +12,10 @@ class TestWalletManager extends BaseWalletManager {
 }
 
 const minimalParams = {
-  xpubVan: 'tpubDDTg3fRGqAvEvshRUUwuS8brXkewNsE6y6Jbb9xZcuzBbmxAWa3UCmwyQG4peM9RwjgY8BDwuRVRU5KGtvRby5kiv1dk13YHU8z39o18QJK',
-  xpubCol: 'tpubDDqoEexZxewBLjXmZ7kxSHgZgmdAtej6DrXLBMiSSuPCdGQqjkTvyETLLVY7qNpxNRGUivvxDj8sswHHihT5effNNDmsbMUX2Lrpy4zjRcS',
+  xpubVan:
+    'tpubDDTg3fRGqAvEvshRUUwuS8brXkewNsE6y6Jbb9xZcuzBbmxAWa3UCmwyQG4peM9RwjgY8BDwuRVRU5KGtvRby5kiv1dk13YHU8z39o18QJK',
+  xpubCol:
+    'tpubDDqoEexZxewBLjXmZ7kxSHgZgmdAtej6DrXLBMiSSuPCdGQqjkTvyETLLVY7qNpxNRGUivvxDj8sswHHihT5effNNDmsbMUX2Lrpy4zjRcS',
   masterFingerprint: '42424232',
   network: 'testnet',
 };
@@ -60,7 +66,9 @@ describe('BaseWalletManager requireBinding / requireSigner', () => {
 
   it('estimateFee throws WalletError when no signer', async () => {
     const wm = new TestWalletManager(minimalParams);
-    await expect(wm.estimateFee('psbt-base64')).rejects.toBeInstanceOf(WalletError);
+    await expect(wm.estimateFee('psbt-base64')).rejects.toBeInstanceOf(
+      WalletError
+    );
   });
 
   it('signPsbt throws WalletError when no mnemonic/seed/signer', async () => {
@@ -73,14 +81,25 @@ describe('BaseWalletManager with mock binding', () => {
   const mockBinding = {
     getOnline: jest.fn(),
     dropWallet: jest.fn(),
-    registerWallet: jest.fn().mockReturnValue({ address: 'addr', btcBalance: { vanilla: { settled: 0, future: 0, spendable: 0 }, colored: { settled: 0, future: 0, spendable: 0 } } }),
-    getBtcBalance: jest.fn().mockResolvedValue({ vanilla: { settled: 100, future: 0, spendable: 100 }, colored: { settled: 0, future: 0, spendable: 0 } }),
+    registerWallet: jest.fn().mockReturnValue({
+      address: 'addr',
+      btcBalance: {
+        vanilla: { settled: 0, future: 0, spendable: 0 },
+        colored: { settled: 0, future: 0, spendable: 0 },
+      },
+    }),
+    getBtcBalance: jest.fn().mockResolvedValue({
+      vanilla: { settled: 100, future: 0, spendable: 100 },
+      colored: { settled: 0, future: 0, spendable: 0 },
+    }),
     getAddress: jest.fn().mockResolvedValue('tb1qtest'),
     listUnspents: jest.fn().mockResolvedValue([]),
     createUtxosBegin: jest.fn().mockResolvedValue('psbt1'),
     createUtxosEnd: jest.fn().mockResolvedValue(1),
     listAssets: jest.fn().mockResolvedValue({ nia: [], ifa: [] }),
-    getAssetBalance: jest.fn().mockResolvedValue({ future: 0, settled: 0, spendable: 0 }),
+    getAssetBalance: jest
+      .fn()
+      .mockResolvedValue({ future: 0, settled: 0, spendable: 0 }),
     issueAssetNia: jest.fn().mockResolvedValue({}),
     issueAssetIfa: jest.fn().mockResolvedValue({}),
     inflateBegin: jest.fn().mockResolvedValue('psbt2'),
@@ -89,8 +108,16 @@ describe('BaseWalletManager with mock binding', () => {
     sendEnd: jest.fn().mockResolvedValue({ txid: 'abc' }),
     sendBtcBegin: jest.fn().mockResolvedValue('psbt4'),
     sendBtcEnd: jest.fn().mockResolvedValue('txid'),
-    blindReceive: jest.fn().mockResolvedValue({ invoice: 'inv', expirationTimestamp: null, batchTransferIdx: 0 }),
-    witnessReceive: jest.fn().mockResolvedValue({ invoice: 'inv2', expirationTimestamp: null, batchTransferIdx: 0 }),
+    blindReceive: jest.fn().mockResolvedValue({
+      invoice: 'inv',
+      expirationTimestamp: null,
+      batchTransferIdx: 0,
+    }),
+    witnessReceive: jest.fn().mockResolvedValue({
+      invoice: 'inv2',
+      expirationTimestamp: null,
+      batchTransferIdx: 0,
+    }),
     decodeRGBInvoice: jest.fn().mockResolvedValue({}),
     listTransactions: jest.fn().mockResolvedValue([]),
     listTransfers: jest.fn().mockResolvedValue([]),
@@ -128,7 +155,9 @@ describe('BaseWalletManager with mock binding', () => {
   it('estimateFeeRate throws for non-positive blocks', async () => {
     const wm = new TestWalletManager(minimalParams, mockBinding as any);
     await expect(wm.estimateFeeRate(0)).rejects.toBeInstanceOf(ValidationError);
-    await expect(wm.estimateFeeRate(-1)).rejects.toBeInstanceOf(ValidationError);
+    await expect(wm.estimateFeeRate(-1)).rejects.toBeInstanceOf(
+      ValidationError
+    );
   });
 
   it('estimateFeeRate delegates valid request to binding', async () => {
@@ -148,7 +177,10 @@ describe('BaseWalletManager dispose', () => {
   });
 
   it('getBtcBalance throws after dispose', async () => {
-    const mockBinding = { getBtcBalance: jest.fn(), dropWallet: jest.fn() } as any;
+    const mockBinding = {
+      getBtcBalance: jest.fn(),
+      dropWallet: jest.fn(),
+    } as any;
     const wm = new TestWalletManager(minimalParams, mockBinding);
     await wm.dispose();
     await expect(wm.getBtcBalance()).rejects.toBeInstanceOf(WalletError);

@@ -20,7 +20,6 @@ module.exports = {
         diagnostics: {
           ignoreCodes: [1343, 2351, 6059, 7016],
         },
-        isolatedModules: true,
         useESM: true,
       },
     ],

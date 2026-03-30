@@ -598,8 +598,7 @@ export async function deriveKeysFromXpriv(
   xpriv?: string
 ): Promise<GeneratedKeys> {
   // Support both (xpriv) and (network, xpriv) call signatures
-  const actualXpriv =
-    xpriv !== undefined ? xpriv : String(networkOrXpriv);
+  const actualXpriv = xpriv !== undefined ? xpriv : String(networkOrXpriv);
 
   if (!actualXpriv || typeof actualXpriv !== 'string') {
     throw new ValidationError('xpriv must be a non-empty string', 'xpriv');
