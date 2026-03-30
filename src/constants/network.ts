@@ -12,11 +12,11 @@ export const NETWORK_MAP = {
   '1': 'testnet' as const,
   '2': 'testnet' as const,
   '3': 'regtest' as const,
-  signet: 'signet' as const,
-  mainnet: 'mainnet' as const,
-  testnet: 'testnet' as const,
-  testnet4: 'testnet4' as const,
-  regtest: 'regtest' as const,
+  'signet': 'signet' as const,
+  'mainnet': 'mainnet' as const,
+  'testnet': 'testnet' as const,
+  'testnet4': 'testnet4' as const,
+  'regtest': 'regtest' as const,
 } as const;
 
 /**
@@ -44,7 +44,10 @@ export const BIP32_VERSIONS = {
     public: 0x043587cf,
     private: 0x04358394,
   },
-} as const satisfies Record<BitcoinNetwork, { public: number; private: number }>;
+} as const satisfies Record<
+  BitcoinNetwork,
+  { public: number; private: number }
+>;
 
 // UTEXO network config re-exports will be added in Phase 7
 // (utexo/utils/network.ts → core)

@@ -24,7 +24,7 @@ export function deriveDescriptors(
   rootNode: BIP32Interface,
   fp: string,
   network: Network,
-  psbtType: PsbtType,
+  psbtType: PsbtType
 ): Descriptors {
   const isMainnet = network === 'mainnet';
   const coinTypeBtc = isMainnet ? COIN_BITCOIN_MAINNET : COIN_BITCOIN_TESTNET;
@@ -41,11 +41,17 @@ export function deriveDescriptors(
   }
 
   const rgbAccountPath = `m/${DERIVATION_PURPOSE}'/${coinTypeRgb}'/${DERIVATION_ACCOUNT}'`;
-  const rgbKeychainXprv = rootNode.derivePath(rgbAccountPath).derivePath(`m/${KEYCHAIN_RGB}`).toBase58();
+  const rgbKeychainXprv = rootNode
+    .derivePath(rgbAccountPath)
+    .derivePath(`m/${KEYCHAIN_RGB}`)
+    .toBase58();
   const rgbOrigin = `[${fp}/${DERIVATION_PURPOSE}'/${coinTypeRgb}'/${DERIVATION_ACCOUNT}'/${KEYCHAIN_RGB}]`;
 
   const btcAccountPath = `m/${DERIVATION_PURPOSE}'/${coinTypeBtc}'/${DERIVATION_ACCOUNT}'`;
-  const btcKeychainXprv = rootNode.derivePath(btcAccountPath).derivePath(`m/${KEYCHAIN_BTC}`).toBase58();
+  const btcKeychainXprv = rootNode
+    .derivePath(btcAccountPath)
+    .derivePath(`m/${KEYCHAIN_BTC}`)
+    .toBase58();
   const btcOrigin = `[${fp}/${DERIVATION_PURPOSE}'/${coinTypeBtc}'/${DERIVATION_ACCOUNT}'/${KEYCHAIN_BTC}]`;
 
   return {
@@ -74,7 +80,7 @@ function readCompactSize(buf: Buffer, pos: number): [number, number] {
 function parsePsbtMap(
   buf: Buffer,
   start: number,
-  onEntry: (key: Buffer, value: Buffer) => void,
+  onEntry: (key: Buffer, value: Buffer) => void
 ): number {
   let pos = start;
   while (pos < buf.length) {
@@ -113,18 +119,29 @@ export function detectPsbtType(psbtBase64: string): PsbtType {
   try {
     const buf = Buffer.from(psbtBase64.trim(), 'base64');
 
-    if (buf.length < 5 || buf.readUInt32BE(0) !== 0x70736274 || buf[4] !== 0xff) {
+    if (
+      buf.length < 5 ||
+      buf.readUInt32BE(0) !== 0x70736274 ||
+      buf[4] !== 0xff
+    ) {
       return 'create_utxo';
     }
 
     const le4 = (n: number): string => {
       const v = n >>> 0;
-      return Buffer.from([v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff]).toString('hex');
+      return Buffer.from([
+        v & 0xff,
+        (v >> 8) & 0xff,
+        (v >> 16) & 0xff,
+        (v >> 24) & 0xff,
+      ]).toString('hex');
     };
 
     // 8-byte path prefix: purpose' + rgb_coin_type' (avoids false positives from isolated 4-byte matches)
-    const testnetPrefix = le4(0x80000000 | DERIVATION_PURPOSE) + le4(0x80000000 | COIN_RGB_TESTNET);
-    const mainnetPrefix = le4(0x80000000 | DERIVATION_PURPOSE) + le4(0x80000000 | COIN_RGB_MAINNET);
+    const testnetPrefix =
+      le4(0x80000000 | DERIVATION_PURPOSE) + le4(0x80000000 | COIN_RGB_TESTNET);
+    const mainnetPrefix =
+      le4(0x80000000 | DERIVATION_PURPOSE) + le4(0x80000000 | COIN_RGB_MAINNET);
 
     const asciiPatterns = [
       Buffer.from(COIN_RGB_TESTNET + "'").toString('hex'),
@@ -138,7 +155,11 @@ export function detectPsbtType(psbtBase64: string): PsbtType {
 
     pos = parsePsbtMap(buf, pos, (key, value) => {
       if (key.length === 1 && key[0] === 0x00) {
-        try { inputCount = parseTxInputCount(value); } catch { /* ignore */ }
+        try {
+          inputCount = parseTxInputCount(value);
+        } catch {
+          /* ignore */
+        }
       }
     });
 
@@ -150,11 +171,18 @@ export function detectPsbtType(psbtBase64: string): PsbtType {
         if (keyType !== 0x06 && keyType !== 0x16) return;
 
         const valueHex = value.toString('hex');
-        if (valueHex.includes(testnetPrefix) || valueHex.includes(mainnetPrefix)) {
-          inputCount = -1; return;
+        if (
+          valueHex.includes(testnetPrefix) ||
+          valueHex.includes(mainnetPrefix)
+        ) {
+          inputCount = -1;
+          return;
         }
         for (const pat of asciiPatterns) {
-          if (valueHex.includes(pat)) { inputCount = -1; return; }
+          if (valueHex.includes(pat)) {
+            inputCount = -1;
+            return;
+          }
         }
       });
 

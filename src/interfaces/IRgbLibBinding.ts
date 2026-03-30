@@ -81,8 +81,13 @@ export interface IRgbLibBinding {
   refreshWallet(): void;
   syncWallet(): void;
 
-  getFeeEstimation(params: { blocks: number }): Promise<GetFeeEstimationResponse>;
-  createBackup(params: { backupPath: string; password: string }): Promise<WalletBackupResponse>;
+  getFeeEstimation(params: {
+    blocks: number;
+  }): Promise<GetFeeEstimationResponse>;
+  createBackup(params: {
+    backupPath: string;
+    password: string;
+  }): Promise<WalletBackupResponse>;
 
   configureVssBackup(config: VssBackupConfig): void;
   disableVssAutoBackup(): void;

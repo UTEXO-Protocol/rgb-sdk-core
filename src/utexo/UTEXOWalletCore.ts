@@ -25,7 +25,11 @@ import {
 } from './utils/network';
 import { getBridgeAPI } from './bridge/api';
 import type { TransferByMainnetInvoiceResponse } from './bridge/types';
-import { decodeBridgeInvoice, toUnitsNumber, fromUnitsNumber } from './utils/helpers';
+import {
+  decodeBridgeInvoice,
+  toUnitsNumber,
+  fromUnitsNumber,
+} from './utils/helpers';
 import { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './config/vss';
 import type { ConfigOptions } from './config/options';
 import { buildVssConfigFromMnemonic } from './restore';
@@ -75,7 +79,8 @@ import type { EstimateFeeResult } from '../crypto/types';
 
 export abstract class UTEXOWalletCore
   extends UTEXOProtocol
-  implements IWalletManager, IUTEXOProtocol {
+  implements IWalletManager, IUTEXOProtocol
+{
   protected readonly mnemonicOrSeed: string | Uint8Array;
   protected readonly options: ConfigOptions;
   protected readonly networkMap: UtxoNetworkMap;
@@ -323,11 +328,7 @@ export abstract class UTEXOWalletCore
     password: string;
   }): Promise<WalletBackupResponse> {
     this.ensureInitialized();
-<<<<<<< HEAD
-    this.layer1Wallet!.createBackup(params);
-=======
     await this.layer1Wallet!.createBackup(params);
->>>>>>> 1abde8ce7278c1d60103f6f8293803c883efda64
     return this.utexoWallet!.createBackup(params);
   }
 
@@ -503,7 +504,9 @@ export abstract class UTEXOWalletCore
         invoice,
         this.networkIdMap.utexo.networkId
       );
-      return withdrawTransfer ? (withdrawTransfer.status as OnchainSendStatus) : null;
+      return withdrawTransfer
+        ? (withdrawTransfer.status as OnchainSendStatus)
+        : null;
     }
     const { invoiceData, destinationAsset } =
       await this._extractInvoiceAndAsset(bridgeTransfer);
@@ -534,8 +537,10 @@ export abstract class UTEXOWalletCore
     this.ensureInitialized();
     const asset = params.asset;
     if (!asset) throw new ValidationError('Asset is required', 'asset');
-    if (!asset.assetId) throw new ValidationError('Asset ID is required', 'assetId');
-    if (!asset.amount) throw new ValidationError('Amount is required', 'amount');
+    if (!asset.assetId)
+      throw new ValidationError('Asset ID is required', 'assetId');
+    if (!asset.amount)
+      throw new ValidationError('Amount is required', 'amount');
 
     const destinationAsset = getDestinationAsset(
       'mainnet',
@@ -544,7 +549,10 @@ export abstract class UTEXOWalletCore
       this.networkIdMap
     );
     if (!destinationAsset) {
-      throw new ValidationError('Destination asset is not supported', 'assetId');
+      throw new ValidationError(
+        'Destination asset is not supported',
+        'assetId'
+      );
     }
 
     const destinationInvoice = await this.utexoWallet!.witnessReceive({
@@ -639,9 +647,10 @@ export abstract class UTEXOWalletCore
     );
   }
 
-  async getLightningSendFeeEstimate(
-    _params: { invoice: string; assetId?: string }
-  ): Promise<number> {
+  async getLightningSendFeeEstimate(_params: {
+    invoice: string;
+    assetId?: string;
+  }): Promise<number> {
     throw new Error('getLightningSendFeeEstimate not implemented');
   }
 
@@ -698,7 +707,10 @@ export abstract class UTEXOWalletCore
       bridgeTransfer.recipientToken.id
     );
     if (!destinationAsset) {
-      throw new ValidationError('Destination asset is not supported', 'assetId');
+      throw new ValidationError(
+        'Destination asset is not supported',
+        'assetId'
+      );
     }
     return { utexoInvoice, invoiceData, destinationAsset };
   }
@@ -716,7 +728,9 @@ export abstract class UTEXOWalletCore
         invoice,
         this.networkIdMap.utexo.networkId
       );
-      return withdrawTransfer ? (withdrawTransfer.status as TransferStatus) : null;
+      return withdrawTransfer
+        ? (withdrawTransfer.status as TransferStatus)
+        : null;
     }
     const { invoiceData, destinationAsset } =
       await this._extractInvoiceAndAsset(bridgeTransfer);
@@ -724,16 +738,22 @@ export abstract class UTEXOWalletCore
       destinationAsset.assetId
     );
     return transfers.length > 0
-      ? (transfers.find((t) => t.recipientId === invoiceData.recipientId)?.status ?? null)
+      ? (transfers.find((t) => t.recipientId === invoiceData.recipientId)
+          ?.status ?? null)
       : null;
   }
 
   private async _utexoToMainnetRGB(
     params: OnchainSendRequestModel
   ): Promise<string> {
-    const invoiceData = await this.decodeRGBInvoice({ invoice: params.invoice });
+    const invoiceData = await this.decodeRGBInvoice({
+      invoice: params.invoice,
+    });
     if (!params.assetId && !invoiceData.assetId) {
-      throw new ValidationError('Asset ID is required for external invoice', 'assetId');
+      throw new ValidationError(
+        'Asset ID is required for external invoice',
+        'assetId'
+      );
     }
     const assetId = params.assetId ?? invoiceData.assetId;
     const utexoAsset = getDestinationAsset(
@@ -749,17 +769,26 @@ export abstract class UTEXOWalletCore
       utexoAsset.tokenId
     );
     if (!destinationAsset) {
-      throw new ValidationError('Destination asset is not supported', 'assetId');
+      throw new ValidationError(
+        'Destination asset is not supported',
+        'assetId'
+      );
     }
     if (!params.amount && !invoiceData.assignment.amount) {
-      throw new ValidationError('Amount is required for external invoice', 'amount');
+      throw new ValidationError(
+        'Amount is required for external invoice',
+        'amount'
+      );
     }
 
     let amount: number;
     if (params.amount) {
       amount = params.amount;
     } else if (invoiceData.assignment.amount) {
-      amount = fromUnitsNumber(invoiceData.assignment.amount, destinationAsset.precision);
+      amount = fromUnitsNumber(
+        invoiceData.assignment.amount,
+        destinationAsset.precision
+      );
     } else {
       throw new ValidationError('Amount is required', 'amount');
     }
@@ -800,7 +829,10 @@ export abstract class UTEXOWalletCore
     params: PayLightningInvoiceRequestModel
   ): Promise<string> {
     if (!params.assetId) {
-      throw new ValidationError('Asset ID is required for external invoice', 'assetId');
+      throw new ValidationError(
+        'Asset ID is required for external invoice',
+        'assetId'
+      );
     }
     const utexoAsset = getDestinationAsset(
       'mainnet',
@@ -812,10 +844,16 @@ export abstract class UTEXOWalletCore
       utexoAsset?.tokenId ?? 0
     );
     if (!destinationAsset || !utexoAsset) {
-      throw new ValidationError('Destination asset is not supported', 'assetId');
+      throw new ValidationError(
+        'Destination asset is not supported',
+        'assetId'
+      );
     }
     if (!params.amount) {
-      throw new ValidationError('Amount is required for external invoice', 'amount');
+      throw new ValidationError(
+        'Amount is required for external invoice',
+        'amount'
+      );
     }
 
     await this.validateBalance(
