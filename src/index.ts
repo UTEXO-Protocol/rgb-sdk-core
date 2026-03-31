@@ -55,7 +55,10 @@ export {
 } from './utils/bip32-helpers';
 
 // Interfaces
-export type { WalletInitParams, IWalletManager } from './interfaces/IWalletManager';
+export type {
+  WalletInitParams,
+  IWalletManager,
+} from './interfaces/IWalletManager';
 export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
 export type {
@@ -133,7 +136,13 @@ export { decodeBridgeInvoice } from './utexo/utils/helpers';
 export { buildVssConfigFromMnemonic, getBackupStoreId } from './utexo/restore';
 
 // Crypto — key derivation (pure @scure/*, works in Node, RN, and Web)
-export { bip39, bip32Factory, signSchnorr, verifySchnorr, xOnlyPointFromPoint } from './crypto/dependencies';
+export {
+  bip39,
+  bip32Factory,
+  signSchnorr,
+  verifySchnorr,
+  xOnlyPointFromPoint,
+} from './crypto/dependencies';
 export type { GeneratedKeys, AccountXpubs, SeedInput } from './crypto/keys';
 export {
   generateKeys,

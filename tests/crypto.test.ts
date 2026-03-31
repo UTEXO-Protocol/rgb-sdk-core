@@ -54,26 +54,19 @@ describe('bip32Factory', () => {
 
 describe('signSchnorr / verifySchnorr', () => {
   it('signs and verifies a message', () => {
-    const privateKey = new Uint8Array(32).fill(1);
+    const bip32 = bip32Factory();
+    const seedBytes = bip39.mnemonicToSeedSync(
+      'flight seminar tray bulb level embody switch enhance august deny scene dismiss'
+    );
+    const node = bip32.fromSeed(seedBytes);
+    const privateKey = node.privateKey!;
     const message = new Uint8Array(32).fill(2);
     const sig = signSchnorr(message, privateKey);
     expect(sig).toBeInstanceOf(Uint8Array);
     expect(sig.length).toBe(64);
 
-    const pubkey = xOnlyPointFromPoint(
-      // derive pubkey from privkey via secp256k1
-      (() => {
-        // Use the node we know works
-        const bip32 = bip32Factory();
-        const seed = new Uint8Array(64).fill(1);
-        const node = bip32.fromSeed(seed);
-        return node.publicKey;
-      })()
-    );
-
-    // Verify with the matching xonly pubkey
-    // We do a round-trip: sign then verify should pass
-    expect(sig.length).toBe(64);
+    const pubkey = xOnlyPointFromPoint(node.publicKey);
+    expect(verifySchnorr(message, pubkey, sig)).toBe(true);
   });
 
   it('returns Uint8Array from signSchnorr', () => {

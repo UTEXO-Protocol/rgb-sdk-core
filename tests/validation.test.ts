@@ -57,7 +57,9 @@ describe('validateMnemonic', () => {
   });
 
   it('throws for non-string', () => {
-    expect(() => validateMnemonic(null as any, 'mnemonic')).toThrow(ValidationError);
+    expect(() => validateMnemonic(null as any, 'mnemonic')).toThrow(
+      ValidationError
+    );
   });
 });
 

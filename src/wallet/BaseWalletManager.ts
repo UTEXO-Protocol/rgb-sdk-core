@@ -1,6 +1,9 @@
 import { normalizeNetwork } from '../utils/validation';
 import { ValidationError, WalletError } from '../errors';
-import type { IWalletManager, WalletInitParams } from '../interfaces/IWalletManager';
+import type {
+  IWalletManager,
+  WalletInitParams,
+} from '../interfaces/IWalletManager';
 import type { IRgbLibBinding } from '../interfaces/IRgbLibBinding';
 import type { ISigner } from '../interfaces/ISigner';
 import type { EstimateFeeResult, Network } from '../crypto/types';
@@ -256,9 +259,7 @@ export abstract class BaseWalletManager implements IWalletManager {
     return this.requireBinding().witnessReceive(params);
   }
 
-  async decodeRGBInvoice(params: {
-    invoice: string;
-  }): Promise<InvoiceData> {
+  async decodeRGBInvoice(params: { invoice: string }): Promise<InvoiceData> {
     this.ensureNotDisposed();
     return this.requireBinding().decodeRGBInvoice(params);
   }
@@ -424,9 +425,7 @@ export abstract class BaseWalletManager implements IWalletManager {
     return this.sendEnd({ signedPsbt });
   }
 
-  public async sendBtc(
-    params: SendBtcBeginRequestModel
-  ): Promise<string> {
+  public async sendBtc(params: SendBtcBeginRequestModel): Promise<string> {
     this.ensureNotDisposed();
     const psbt = await this.sendBtcBegin(params);
     const signed = await this.signPsbt(psbt);

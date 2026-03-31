@@ -33,6 +33,17 @@ export default [
       'prettier/prettier': 'error',
     },
   },
+  // Jest globals (describe, it, expect, etc.) — avoids no-undef in test files
+  {
+    files: ['**/*.{test,spec}.{js,ts}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+        ...globals.jest,
+      },
+    },
+  },
   {
     ignores: ['node_modules/', 'dist/'],
   },
