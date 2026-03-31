@@ -90,7 +90,8 @@ export abstract class BaseWalletManager implements IWalletManager {
     this.xpubVan = params.xpubVan;
     this.xpubCol = params.xpubCol;
     this.mnemonic = params.mnemonic ?? null;
-    this.seed = params.seed ?? (this.mnemonic ? seedFromMnemonic(this.mnemonic) : null);
+    this.seed =
+      params.seed ?? (this.mnemonic ? seedFromMnemonic(this.mnemonic) : null);
     this.masterFingerprint = params.masterFingerprint;
     this.binding = binding ?? null;
     this.signer = signer ?? null;
