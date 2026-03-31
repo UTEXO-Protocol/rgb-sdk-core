@@ -650,3 +650,10 @@ export async function accountXpubsFromMnemonic(
     );
   }
 }
+
+export function seedFromMnemonic(mnemonic: string): Uint8Array {
+  if (!bip39 || typeof bip39.mnemonicToSeedSync !== 'function') {
+    throw new CryptoError('bip39 module not loaded correctly');
+  }
+  return normalizeSeedBuffer(bip39.mnemonicToSeedSync(mnemonic.trim()));
+}
