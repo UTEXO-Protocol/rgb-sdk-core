@@ -3,6 +3,7 @@ import {
   BaseWalletManager,
   WalletError,
   ValidationError,
+  bip39,
 } from '../dist/index.mjs';
 
 // Minimal concrete subclass for testing
@@ -10,6 +11,27 @@ class TestWalletManager extends BaseWalletManager {
   async initialize() {}
   async goOnline(_url: string) {}
 }
+
+/** Exposes protected fields for constructor / seed behavior tests only */
+class SeedInspectableWalletManager extends BaseWalletManager {
+  async initialize() {}
+  async goOnline(_url: string) {}
+
+  getMnemonicSnapshot(): string | null {
+    return this.mnemonic;
+  }
+
+  getSeedSnapshot(): Uint8Array | null {
+    return this.seed ? new Uint8Array(this.seed) : null;
+  }
+}
+
+function bip39SeedBytes(mnemonic: string): Uint8Array {
+  return new Uint8Array(bip39.mnemonicToSeedSync(mnemonic.trim()));
+}
+
+const testMnemonic =
+  'flight seminar tray bulb level embody switch enhance august deny scene dismiss';
 
 const minimalParams = {
   xpubVan:
@@ -50,6 +72,27 @@ describe('BaseWalletManager construction', () => {
   it('defaults network to regtest', () => {
     const wm = new TestWalletManager({ ...minimalParams, network: undefined });
     expect(wm.getNetwork()).toBe('regtest');
+  });
+
+  it('derives seed from mnemonic when seed is omitted', () => {
+    const wm = new SeedInspectableWalletManager({
+      ...minimalParams,
+      mnemonic: testMnemonic,
+    });
+    expect(wm.getMnemonicSnapshot()).toBe(testMnemonic);
+    expect(wm.getSeedSnapshot()).toEqual(bip39SeedBytes(testMnemonic));
+  });
+
+  it('uses explicit seed when both seed and mnemonic are provided', () => {
+    const explicitSeed = new Uint8Array(64).fill(1);
+    const wm = new SeedInspectableWalletManager({
+      ...minimalParams,
+      mnemonic: testMnemonic,
+      seed: explicitSeed,
+    });
+    expect(wm.getMnemonicSnapshot()).toBe(testMnemonic);
+    expect(wm.getSeedSnapshot()).toEqual(explicitSeed);
+    expect(wm.getSeedSnapshot()).not.toEqual(bip39SeedBytes(testMnemonic));
   });
 });
 
