@@ -30,7 +30,9 @@ describe('BIP32_VERSIONS', () => {
 
   it('utexo uses testnet-family versions (not mainnet)', () => {
     expect(BIP32_VERSIONS.utexo.public).not.toBe(BIP32_VERSIONS.mainnet.public);
-    expect(BIP32_VERSIONS.utexo.private).not.toBe(BIP32_VERSIONS.mainnet.private);
+    expect(BIP32_VERSIONS.utexo.private).not.toBe(
+      BIP32_VERSIONS.mainnet.private
+    );
   });
 });
 
@@ -78,7 +80,9 @@ describe('DEFAULT_TRANSPORT_ENDPOINTS', () => {
   });
 
   it('utexo and signet transport endpoints are different', () => {
-    expect(DEFAULT_TRANSPORT_ENDPOINTS.utexo).not.toBe(DEFAULT_TRANSPORT_ENDPOINTS.signet);
+    expect(DEFAULT_TRANSPORT_ENDPOINTS.utexo).not.toBe(
+      DEFAULT_TRANSPORT_ENDPOINTS.signet
+    );
   });
 });
 
