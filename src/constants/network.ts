@@ -13,6 +13,7 @@ export const NETWORK_MAP = {
   '2': 'testnet' as const,
   '3': 'regtest' as const,
   'signet': 'signet' as const,
+  'utexo': 'utexo' as const,
   'mainnet': 'mainnet' as const,
   'testnet': 'testnet' as const,
   'testnet4': 'testnet4' as const,
@@ -37,6 +38,10 @@ export const BIP32_VERSIONS = {
     private: 0x04358394,
   },
   signet: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  utexo: {
     public: 0x043587cf,
     private: 0x04358394,
   },

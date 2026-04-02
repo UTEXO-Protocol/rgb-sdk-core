@@ -43,7 +43,7 @@ function withGetAssetById<T extends NetworkConfig>(
 export const testnetPreset: UtxoNetworkPresetConfig = {
   networkMap: {
     mainnet: 'testnet',
-    utexo: 'signet',
+    utexo: 'utexo',
   },
   networkIdMap: {
     mainnet: withGetAssetById({
@@ -96,7 +96,7 @@ export const testnetPreset: UtxoNetworkPresetConfig = {
 export const mainnetPreset: UtxoNetworkPresetConfig = {
   networkMap: {
     mainnet: 'mainnet',
-    utexo: 'signet',
+    utexo: 'utexo',
   },
   networkIdMap: {
     mainnet: withGetAssetById({

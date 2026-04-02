@@ -7,6 +7,7 @@ const VALID_NETWORKS: Network[] = [
   'testnet',
   'testnet4',
   'signet',
+  'utexo',
   'regtest',
 ];
 
