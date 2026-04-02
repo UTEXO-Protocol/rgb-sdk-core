@@ -1,4 +1,5 @@
 import { normalizeNetwork } from '../utils/validation';
+import { seedFromMnemonic } from '../crypto/keys';
 import { ValidationError, WalletError } from '../errors';
 import type {
   IWalletManager,
@@ -88,8 +89,9 @@ export abstract class BaseWalletManager implements IWalletManager {
     this.network = normalizeNetwork(params.network ?? 'regtest');
     this.xpubVan = params.xpubVan;
     this.xpubCol = params.xpubCol;
-    this.seed = params.seed ?? null;
     this.mnemonic = params.mnemonic ?? null;
+    this.seed =
+      params.seed ?? (this.mnemonic ? seedFromMnemonic(this.mnemonic) : null);
     this.masterFingerprint = params.masterFingerprint;
     this.binding = binding ?? null;
     this.signer = signer ?? null;

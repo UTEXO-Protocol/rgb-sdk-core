@@ -336,6 +336,16 @@ export abstract class UTEXOWalletCore
     return this.utexoWallet!.createBackup(params);
   }
 
+  // ── VSS config helper ─────────────────────────────────────────────────────────
+
+  /**
+   * Returns the default VSS config that will be used for zero-arg vssBackup / vssBackupInfo calls.
+   * Useful when you need to capture the config (e.g. to pass it to restoreFromVss later).
+   */
+  async getDefaultVssConfig(): Promise<VssBackupConfig> {
+    return this._resolveVssConfig();
+  }
+
   // ── IWalletManager: VSS (delegates to both wallets) ──────────────────────────
 
   async configureVssBackup(config: VssBackupConfig): Promise<void> {

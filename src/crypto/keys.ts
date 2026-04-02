@@ -650,3 +650,18 @@ export async function accountXpubsFromMnemonic(
     );
   }
 }
+
+export function seedFromMnemonic(mnemonic: string): Uint8Array {
+  validateMnemonic(mnemonic, 'mnemonic');
+  if (!bip39 || typeof bip39.mnemonicToSeedSync !== 'function') {
+    throw new CryptoError('bip39 module not loaded correctly');
+  }
+  const trimmedMnemonic = mnemonic.trim();
+  if (!bip39.validateMnemonic(trimmedMnemonic)) {
+    throw new ValidationError(
+      'Invalid mnemonic format - failed BIP39 validation',
+      'mnemonic'
+    );
+  }
+  return normalizeSeedBuffer(bip39.mnemonicToSeedSync(trimmedMnemonic));
+}
