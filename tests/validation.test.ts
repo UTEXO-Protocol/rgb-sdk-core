@@ -14,6 +14,8 @@ describe('normalizeNetwork', () => {
     expect(normalizeNetwork('mainnet')).toBe('mainnet');
     expect(normalizeNetwork('testnet')).toBe('testnet');
     expect(normalizeNetwork('regtest')).toBe('regtest');
+    expect(normalizeNetwork('signet')).toBe('signet');
+    expect(normalizeNetwork('utexo')).toBe('utexo');
   });
 
   it('maps numeric networks', () => {
@@ -33,6 +35,8 @@ describe('validateNetwork', () => {
     expect(() => validateNetwork('mainnet')).not.toThrow();
     expect(() => validateNetwork('testnet')).not.toThrow();
     expect(() => validateNetwork('regtest')).not.toThrow();
+    expect(() => validateNetwork('signet')).not.toThrow();
+    expect(() => validateNetwork('utexo')).not.toThrow();
   });
 
   it('throws ValidationError for truly invalid network', () => {
