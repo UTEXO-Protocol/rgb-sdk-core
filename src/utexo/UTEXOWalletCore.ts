@@ -187,9 +187,14 @@ export abstract class UTEXOWalletCore
     return this.utexoWallet!.getAddress();
   }
 
-  async rotateAddress(keychain: number): Promise<string> {
+  async rotateVanillaAddress(): Promise<string> {
     this.ensureInitialized();
-    return this.utexoWallet!.rotateAddress(keychain);
+    return this.utexoWallet!.rotateVanillaAddress();
+  }
+
+  async rotateColoredAddress(): Promise<string> {
+    this.ensureInitialized();
+    return this.utexoWallet!.rotateColoredAddress();
   }
 
   async listUnspents(): Promise<Unspent[]> {

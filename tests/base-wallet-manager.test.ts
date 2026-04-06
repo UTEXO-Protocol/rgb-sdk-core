@@ -136,7 +136,8 @@ describe('BaseWalletManager with mock binding', () => {
       colored: { settled: 0, future: 0, spendable: 0 },
     }),
     getAddress: jest.fn().mockResolvedValue('tb1qtest'),
-    rotateAddress: jest.fn().mockResolvedValue('tb1qrotated'),
+    rotateVanillaAddress: jest.fn().mockResolvedValue('tb1qvanilla'),
+    rotateColoredAddress: jest.fn().mockResolvedValue('tb1qcolored'),
     listUnspents: jest.fn().mockResolvedValue([]),
     createUtxosBegin: jest.fn().mockResolvedValue('psbt1'),
     createUtxosEnd: jest.fn().mockResolvedValue(1),
@@ -262,42 +263,47 @@ describe('WalletInitParams — new optional fields', () => {
   });
 });
 
-describe('BaseWalletManager rotateAddress', () => {
-  it('throws WalletError when no binding', async () => {
+describe('BaseWalletManager rotateVanillaAddress / rotateColoredAddress', () => {
+  it('rotateVanillaAddress throws WalletError when no binding', async () => {
     const wm = new TestWalletManager(minimalParams);
-    await expect(wm.rotateAddress(0)).rejects.toBeInstanceOf(WalletError);
+    await expect(wm.rotateVanillaAddress()).rejects.toBeInstanceOf(WalletError);
   });
 
-  it('throws WalletError after dispose', async () => {
+  it('rotateColoredAddress throws WalletError when no binding', async () => {
+    const wm = new TestWalletManager(minimalParams);
+    await expect(wm.rotateColoredAddress()).rejects.toBeInstanceOf(WalletError);
+  });
+
+  it('rotateVanillaAddress throws WalletError after dispose', async () => {
     const mockBinding = {
-      rotateAddress: jest.fn().mockResolvedValue('tb1qnew'),
+      rotateVanillaAddress: jest.fn().mockResolvedValue('tb1qnew'),
       dropWallet: jest.fn(),
     } as any;
     const wm = new TestWalletManager(minimalParams, mockBinding);
     await wm.dispose();
-    await expect(wm.rotateAddress(0)).rejects.toBeInstanceOf(WalletError);
+    await expect(wm.rotateVanillaAddress()).rejects.toBeInstanceOf(WalletError);
   });
 
-  it('delegates to binding with keychain 0 (external)', async () => {
+  it('delegates rotateVanillaAddress to binding', async () => {
     const mockBinding = {
-      rotateAddress: jest.fn().mockResolvedValue('tb1qexternal'),
+      rotateVanillaAddress: jest.fn().mockResolvedValue('tb1qvanilla'),
       dropWallet: jest.fn(),
     } as any;
     const wm = new TestWalletManager(minimalParams, mockBinding);
-    const addr = await wm.rotateAddress(0);
-    expect(mockBinding.rotateAddress).toHaveBeenCalledWith(0);
-    expect(addr).toBe('tb1qexternal');
+    const addr = await wm.rotateVanillaAddress();
+    expect(mockBinding.rotateVanillaAddress).toHaveBeenCalled();
+    expect(addr).toBe('tb1qvanilla');
   });
 
-  it('delegates to binding with keychain 1 (internal)', async () => {
+  it('delegates rotateColoredAddress to binding', async () => {
     const mockBinding = {
-      rotateAddress: jest.fn().mockResolvedValue('tb1qinternal'),
+      rotateColoredAddress: jest.fn().mockResolvedValue('tb1qcolored'),
       dropWallet: jest.fn(),
     } as any;
     const wm = new TestWalletManager(minimalParams, mockBinding);
-    const addr = await wm.rotateAddress(1);
-    expect(mockBinding.rotateAddress).toHaveBeenCalledWith(1);
-    expect(addr).toBe('tb1qinternal');
+    const addr = await wm.rotateColoredAddress();
+    expect(mockBinding.rotateColoredAddress).toHaveBeenCalled();
+    expect(addr).toBe('tb1qcolored');
   });
 });
 

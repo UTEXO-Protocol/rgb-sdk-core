@@ -66,7 +66,8 @@ export interface IWalletManager {
 
   getBtcBalance(): Promise<BtcBalance>;
   getAddress(): Promise<string>;
-  rotateAddress(keychain: number): Promise<string>;
+  rotateVanillaAddress(): Promise<string>;
+  rotateColoredAddress(): Promise<string>;
 
   // ── UTXO Management ──────────────────────────────────────────────────────────
 

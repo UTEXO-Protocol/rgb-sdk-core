@@ -176,9 +176,14 @@ export abstract class BaseWalletManager implements IWalletManager {
     return this.requireBinding().getAddress();
   }
 
-  async rotateAddress(keychain: number): Promise<string> {
+  async rotateVanillaAddress(): Promise<string> {
     this.ensureNotDisposed();
-    return this.requireBinding().rotateAddress(keychain);
+    return this.requireBinding().rotateVanillaAddress();
+  }
+
+  async rotateColoredAddress(): Promise<string> {
+    this.ensureNotDisposed();
+    return this.requireBinding().rotateColoredAddress();
   }
 
   // ── UTXO Management ───────────────────────────────────────────────────────────
