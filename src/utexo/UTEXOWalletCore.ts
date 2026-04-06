@@ -77,6 +77,18 @@ import type {
 } from '../types/wallet-model';
 import type { EstimateFeeResult } from '../crypto/types';
 
+/**
+ * `??` only treats null/undefined as missing; empty or whitespace-only strings
+ * should behave like no asset id (e.g. for getDestinationAsset fallbacks).
+ */
+function normalizeOptionalAssetId(
+  assetId: string | undefined | null
+): string | null {
+  if (assetId == null) return null;
+  const t = String(assetId).trim();
+  return t === '' ? null : t;
+}
+
 export abstract class UTEXOWalletCore
   extends UTEXOProtocol
   implements IWalletManager, IUTEXOProtocol
@@ -413,7 +425,7 @@ export abstract class UTEXOWalletCore
     const destinationAsset = getDestinationAsset(
       'mainnet',
       'utexo',
-      params.assetId ?? null,
+      normalizeOptionalAssetId(params.assetId),
       this.networkIdMap
     );
     if (!destinationAsset) {
@@ -551,15 +563,17 @@ export abstract class UTEXOWalletCore
     this.ensureInitialized();
     const asset = params.asset;
     if (!asset) throw new ValidationError('Asset is required', 'asset');
-    if (!asset.assetId)
+    const lnAssetId = normalizeOptionalAssetId(asset.assetId);
+    if (!lnAssetId) {
       throw new ValidationError('Asset ID is required', 'assetId');
+    }
     if (!asset.amount)
       throw new ValidationError('Amount is required', 'amount');
 
     const destinationAsset = getDestinationAsset(
       'mainnet',
       'utexo',
-      asset.assetId,
+      lnAssetId,
       this.networkIdMap
     );
     if (!destinationAsset) {
@@ -763,17 +777,22 @@ export abstract class UTEXOWalletCore
     const invoiceData = await this.decodeRGBInvoice({
       invoice: params.invoice,
     });
-    if (!params.assetId && !invoiceData.assetId) {
+    if (
+      !normalizeOptionalAssetId(params.assetId) &&
+      !normalizeOptionalAssetId(invoiceData.assetId)
+    ) {
       throw new ValidationError(
         'Asset ID is required for external invoice',
         'assetId'
       );
     }
-    const assetId = params.assetId ?? invoiceData.assetId;
+    const assetId =
+      normalizeOptionalAssetId(params.assetId) ??
+      normalizeOptionalAssetId(invoiceData.assetId);
     const utexoAsset = getDestinationAsset(
       'mainnet',
       'utexo',
-      assetId ?? null,
+      assetId,
       this.networkIdMap
     );
     if (!utexoAsset) {
@@ -842,7 +861,8 @@ export abstract class UTEXOWalletCore
   private async _utexoToMainnetLightning(
     params: PayLightningInvoiceRequestModel
   ): Promise<string> {
-    if (!params.assetId) {
+    const externalAssetId = normalizeOptionalAssetId(params.assetId);
+    if (!externalAssetId) {
       throw new ValidationError(
         'Asset ID is required for external invoice',
         'assetId'
@@ -851,7 +871,7 @@ export abstract class UTEXOWalletCore
     const utexoAsset = getDestinationAsset(
       'mainnet',
       'utexo',
-      params.assetId,
+      externalAssetId,
       this.networkIdMap
     );
     const destinationAsset = this.networkIdMap.mainnet.getAssetById(

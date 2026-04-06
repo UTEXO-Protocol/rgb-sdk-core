@@ -12,7 +12,8 @@ export type BitcoinNetwork =
   | 'testnet'
   | 'testnet4'
   | 'regtest'
-  | 'signet';
+  | 'signet'
+  | 'utexo';
 
 // ─── Wallet backup ────────────────────────────────────────────────────────────
 

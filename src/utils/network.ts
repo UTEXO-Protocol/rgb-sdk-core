@@ -18,6 +18,7 @@ export function isNetwork(value: unknown): value is Network {
       normalized === 'testnet' ||
       normalized === 'testnet4' ||
       normalized === 'signet' ||
+      normalized === 'utexo' ||
       normalized === 'regtest')
   );
 }

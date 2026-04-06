@@ -49,6 +49,18 @@ describe('generateKeys', () => {
     expect(keys.xpriv).toMatch(/^tprv/);
   });
 
+  it('generates valid keys for signet', async () => {
+    const keys = await generateKeys('signet');
+    expect(keys.xpub).toMatch(/^tpub/);
+    expect(keys.xpriv).toMatch(/^tprv/);
+  });
+
+  it('generates valid keys for utexo', async () => {
+    const keys = await generateKeys('utexo');
+    expect(keys.xpub).toMatch(/^tpub/);
+    expect(keys.xpriv).toMatch(/^tprv/);
+  });
+
   it('generates unique mnemonics each call', async () => {
     const a = await generateKeys('testnet');
     const b = await generateKeys('testnet');
@@ -91,6 +103,14 @@ describe('deriveKeysFromMnemonic', () => {
     const mainnet = await deriveKeysFromMnemonic('mainnet', testMnemonic);
     expect(testnet.xpub).not.toBe(mainnet.xpub);
     expect(mainnet.xpub).toMatch(/^xpub/);
+  });
+
+  it('utexo produces tpub keys (same BIP32 versions as signet)', async () => {
+    const utexo = await deriveKeysFromMnemonic('utexo', testMnemonic);
+    const signet = await deriveKeysFromMnemonic('signet', testMnemonic);
+    expect(utexo.xpub).toMatch(/^tpub/);
+    expect(utexo.xpub).toBe(signet.xpub);
+    expect(utexo.masterFingerprint).toBe(signet.masterFingerprint);
   });
 });
 
