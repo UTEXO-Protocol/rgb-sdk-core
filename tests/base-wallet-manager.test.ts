@@ -228,7 +228,8 @@ describe('WalletInitParams — new optional fields', () => {
 
   it('accepts reuseAddresses: undefined (default)', () => {
     expect(
-      () => new TestWalletManager({ ...minimalParams, reuseAddresses: undefined })
+      () =>
+        new TestWalletManager({ ...minimalParams, reuseAddresses: undefined })
     ).not.toThrow();
   });
 
@@ -246,19 +247,25 @@ describe('WalletInitParams — new optional fields', () => {
 
   it('accepts vanillaKeychain: undefined (default)', () => {
     expect(
-      () => new TestWalletManager({ ...minimalParams, vanillaKeychain: undefined })
+      () =>
+        new TestWalletManager({ ...minimalParams, vanillaKeychain: undefined })
     ).not.toThrow();
   });
 
   it('accepts maxAllocationsPerUtxo: 1', () => {
     expect(
-      () => new TestWalletManager({ ...minimalParams, maxAllocationsPerUtxo: 1 })
+      () =>
+        new TestWalletManager({ ...minimalParams, maxAllocationsPerUtxo: 1 })
     ).not.toThrow();
   });
 
   it('accepts maxAllocationsPerUtxo: undefined (default)', () => {
     expect(
-      () => new TestWalletManager({ ...minimalParams, maxAllocationsPerUtxo: undefined })
+      () =>
+        new TestWalletManager({
+          ...minimalParams,
+          maxAllocationsPerUtxo: undefined,
+        })
     ).not.toThrow();
   });
 });
