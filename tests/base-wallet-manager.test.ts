@@ -136,6 +136,7 @@ describe('BaseWalletManager with mock binding', () => {
       colored: { settled: 0, future: 0, spendable: 0 },
     }),
     getAddress: jest.fn().mockResolvedValue('tb1qtest'),
+    rotateAddress: jest.fn().mockResolvedValue('tb1qrotated'),
     listUnspents: jest.fn().mockResolvedValue([]),
     createUtxosBegin: jest.fn().mockResolvedValue('psbt1'),
     createUtxosEnd: jest.fn().mockResolvedValue(1),
@@ -208,6 +209,95 @@ describe('BaseWalletManager with mock binding', () => {
     const result = await wm.estimateFeeRate(6);
     expect(mockBinding.getFeeEstimation).toHaveBeenCalledWith({ blocks: 6 });
     expect(result).toEqual({ feeRate: 1 });
+  });
+});
+
+describe('WalletInitParams — new optional fields', () => {
+  it('accepts reuseAddresses: true', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, reuseAddresses: true })
+    ).not.toThrow();
+  });
+
+  it('accepts reuseAddresses: false', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, reuseAddresses: false })
+    ).not.toThrow();
+  });
+
+  it('accepts reuseAddresses: undefined (default)', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, reuseAddresses: undefined })
+    ).not.toThrow();
+  });
+
+  it('accepts vanillaKeychain: 0', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, vanillaKeychain: 0 })
+    ).not.toThrow();
+  });
+
+  it('accepts vanillaKeychain: null', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, vanillaKeychain: null })
+    ).not.toThrow();
+  });
+
+  it('accepts vanillaKeychain: undefined (default)', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, vanillaKeychain: undefined })
+    ).not.toThrow();
+  });
+
+  it('accepts maxAllocationsPerUtxo: 1', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, maxAllocationsPerUtxo: 1 })
+    ).not.toThrow();
+  });
+
+  it('accepts maxAllocationsPerUtxo: undefined (default)', () => {
+    expect(
+      () => new TestWalletManager({ ...minimalParams, maxAllocationsPerUtxo: undefined })
+    ).not.toThrow();
+  });
+});
+
+describe('BaseWalletManager rotateAddress', () => {
+  it('throws WalletError when no binding', async () => {
+    const wm = new TestWalletManager(minimalParams);
+    await expect(wm.rotateAddress(0)).rejects.toBeInstanceOf(WalletError);
+  });
+
+  it('throws WalletError after dispose', async () => {
+    const mockBinding = {
+      rotateAddress: jest.fn().mockResolvedValue('tb1qnew'),
+      dropWallet: jest.fn(),
+    } as any;
+    const wm = new TestWalletManager(minimalParams, mockBinding);
+    await wm.dispose();
+    await expect(wm.rotateAddress(0)).rejects.toBeInstanceOf(WalletError);
+  });
+
+  it('delegates to binding with keychain 0 (external)', async () => {
+    const mockBinding = {
+      rotateAddress: jest.fn().mockResolvedValue('tb1qexternal'),
+      dropWallet: jest.fn(),
+    } as any;
+    const wm = new TestWalletManager(minimalParams, mockBinding);
+    const addr = await wm.rotateAddress(0);
+    expect(mockBinding.rotateAddress).toHaveBeenCalledWith(0);
+    expect(addr).toBe('tb1qexternal');
+  });
+
+  it('delegates to binding with keychain 1 (internal)', async () => {
+    const mockBinding = {
+      rotateAddress: jest.fn().mockResolvedValue('tb1qinternal'),
+      dropWallet: jest.fn(),
+    } as any;
+    const wm = new TestWalletManager(minimalParams, mockBinding);
+    const addr = await wm.rotateAddress(1);
+    expect(mockBinding.rotateAddress).toHaveBeenCalledWith(1);
+    expect(addr).toBe('tb1qinternal');
   });
 });
 

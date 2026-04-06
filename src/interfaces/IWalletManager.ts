@@ -43,6 +43,9 @@ export interface WalletInitParams {
   transportEndpoint?: string;
   indexerUrl?: string;
   dataDir?: string;
+  reuseAddresses?: boolean;
+  vanillaKeychain?: number | null;
+  maxAllocationsPerUtxo?: number;
 }
 
 /**
@@ -63,6 +66,7 @@ export interface IWalletManager {
 
   getBtcBalance(): Promise<BtcBalance>;
   getAddress(): Promise<string>;
+  rotateAddress(keychain: number): Promise<string>;
 
   // ── UTXO Management ──────────────────────────────────────────────────────────
 
