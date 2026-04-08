@@ -26,9 +26,7 @@ export interface ConfigOptions {
    */
   vssServerUrl?: string;
   /**
-   * When true, the UTEXO RGB wallet (rgb-lib) may reuse the same receive addresses
-   * instead of advancing derivation for each new invoice. Applies only to the
-   * `utexo` wallet instance, not the mainnet layer1 wallet. Default: false.
+   * When true, the UTEXO RGB wallet (rgb-lib) may reuse the same receive addresses. Default: false.
    */
   reuseAddresses?: boolean;
 }
