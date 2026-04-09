@@ -47,6 +47,8 @@ export interface IRgbLibBinding {
 
   getBtcBalance(): Promise<BtcBalance>;
   getAddress(): Promise<string>;
+  rotateVanillaAddress(): Promise<string>;
+  rotateColoredAddress(): Promise<string>;
 
   listUnspents(): Promise<Unspent[]>;
   createUtxosBegin(params: CreateUtxosBeginRequestModel): Promise<string>;
