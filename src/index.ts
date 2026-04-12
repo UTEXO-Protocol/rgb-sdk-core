@@ -101,7 +101,7 @@ export { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './utexo/config/vss';
 export type { ConfigOptions } from './utexo/config/options';
 
 // Bridge client
-export { getBridgeAPI, encodeTransferStatus } from './utexo/bridge/api';
+export { getBridgeAPI, encodeTransferStatus, FetchClient } from './utexo/bridge/api';
 export type {
   NetworkAddress,
   TransferType,
