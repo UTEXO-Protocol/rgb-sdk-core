@@ -1,4 +1,3 @@
-import axios, { AxiosError, AxiosInstance } from 'axios';
 import type { UtxoNetworkPreset } from '../utils/network';
 import { DEFAULT_GATEWAY_BASE_URLS } from '../config/gateway';
 import {
@@ -19,38 +18,88 @@ export const encodeTransferStatus = (transferStatus: string): number => {
 };
 
 /**
+ * Minimal HTTP client wrapping the native fetch API.
+ * Works in Node.js 18+, browsers, React Native, and Bare runtime.
+ */
+export class FetchClient {
+  private baseURL: string;
+
+  constructor(baseURL: string) {
+    this.baseURL = baseURL.replace(/\/+$/, '');
+  }
+
+  async post<T = unknown>(path: string, body?: unknown): Promise<{ data: T }> {
+    const res = await fetch(`${this.baseURL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => '');
+      const error = new Error(errorBody || `HTTP ${res.status}`) as Error & {
+        response?: { status: number; data: string };
+      };
+      error.response = { status: res.status, data: errorBody };
+      throw error;
+    }
+    const data = (await res.json()) as T;
+    return { data };
+  }
+
+  async get<T = unknown>(
+    path: string,
+    options?: { params?: Record<string, string | number> }
+  ): Promise<{ data: T }> {
+    let url = `${this.baseURL}${path}`;
+    if (options?.params) {
+      const qs = new URLSearchParams(
+        Object.entries(options.params).map(([k, v]) => [k, String(v)])
+      ).toString();
+      url += `?${qs}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => '');
+      const error = new Error(errorBody || `HTTP ${res.status}`) as Error & {
+        response?: { status: number; data: string };
+      };
+      error.response = { status: res.status, data: errorBody };
+      throw error;
+    }
+    const data = (await res.json()) as T;
+    return { data };
+  }
+}
+
+/**
  * Utexo Bridge API Client
  *
  * Client for interacting with the utexo bridge API endpoints.
  * All endpoints are prefixed with `/v1/utexo/bridge`.
  */
 class UtexoBridgeApiClient {
-  private axios: AxiosInstance;
+  private http: FetchClient;
   private basePath: string;
 
   /**
    * Creates a new UtexoBridgeApiClient instance
    *
-   * @param axiosInstance - Axios instance to use for HTTP requests (required)
+   * @param httpClient - FetchClient instance for HTTP requests
    * @param basePath - Base path for API endpoints (defaults to '/v1/utexo/bridge')
    *
    * @example
    * ```typescript
-   * import axios from 'axios';
-   * import { UtexoBridgeApiClient } from './utexoBridge';
+   * import { getBridgeAPI } from '@utexo/rgb-sdk-core';
    *
-   * const axiosInstance = axios.create({
-   *   baseURL: 'https://api.example.com'
-   * });
-   *
-   * const client = new UtexoBridgeApiClient(axiosInstance);
+   * const client = getBridgeAPI('testnet');
+   * const signature = await client.getBridgeInSignature(request);
    * ```
    */
   constructor(
-    axiosInstance: AxiosInstance,
+    httpClient: FetchClient,
     basePath: string = '/v1/utexo/bridge'
   ) {
-    this.axios = axiosInstance;
+    this.http = httpClient;
     this.basePath = basePath;
   }
 
@@ -59,19 +108,20 @@ class UtexoBridgeApiClient {
    *
    * @param request - Bridge-in signature request data
    * @returns Promise resolving to bridge-in signature response
-   * @throws {ApiError} If the request fails
+   * @throws {Error} If the request fails
    */
   async getBridgeInSignature(
     request: BridgeInSignatureRequest
   ): Promise<BridgeInSignatureResponse> {
     try {
-      const { data } = await this.axios.post<BridgeInSignatureResponse>(
+      const { data } = await this.http.post<BridgeInSignatureResponse>(
         `${this.basePath}/bridge-in-signature`,
         request
       );
       return data;
     } catch (error) {
-      const responseData = (error as AxiosError).response?.data;
+      const responseData = (error as Error & { response?: { data?: string } })
+        .response?.data;
       if (responseData !== undefined) {
         const message =
           typeof responseData === 'string'
@@ -88,10 +138,10 @@ class UtexoBridgeApiClient {
    *
    * @param request - Submit transaction request data
    * @returns Promise resolving to transaction hash
-   * @throws {ApiError} If the request fails
+   * @throws {Error} If the request fails
    */
   async submitTransaction(request: SubmitTransactionRequest): Promise<string> {
-    const { data } = await this.axios.post<SubmitTransactionResponse>(
+    const { data } = await this.http.post<SubmitTransactionResponse>(
       `${this.basePath}/submit-transaction`,
       request
     );
@@ -103,10 +153,10 @@ class UtexoBridgeApiClient {
    *
    * @param request - Verify bridge-in request data
    * @returns Promise that resolves when verification is complete
-   * @throws {ApiError} If the request fails
+   * @throws {Error} If the request fails
    */
   async verifyBridgeIn(request: VerifyBridgeInRequest): Promise<void> {
-    await this.axios.post(`${this.basePath}/verify-bridge-in`, request);
+    await this.http.post(`${this.basePath}/verify-bridge-in`, request);
   }
 
   /**
@@ -115,13 +165,13 @@ class UtexoBridgeApiClient {
    * @param transferId - Transfer ID
    * @param networkId - Network ID
    * @returns Promise resolving to invoice string
-   * @throws {ApiError} If the request fails
+   * @throws {Error} If the request fails
    */
   async getReceiverInvoice(
     transferId: number,
     networkId: number
   ): Promise<string> {
-    const { data } = await this.axios.get<ReceiverInvoiceResponse>(
+    const { data } = await this.http.get<ReceiverInvoiceResponse>(
       `${this.basePath}/receiver-invoice/${transferId}/${networkId}`
     );
     return data.invoice;
@@ -131,7 +181,7 @@ class UtexoBridgeApiClient {
     invoice: string,
     networkId: number
   ): Promise<TransferByMainnetInvoiceResponse | null> {
-    const { data } = await this.axios.get<{
+    const { data } = await this.http.get<{
       transfers: TransferByMainnetInvoiceResponse[];
     }>(`${this.basePath}/transfers/history`, {
       params: {
@@ -165,14 +215,14 @@ class UtexoBridgeApiClient {
    * @param mainnetInvoice - Mainnet invoice string
    * @param networkId - Network ID
    * @returns Promise resolving to transfer information
-   * @throws {ApiError} If the request fails
+   * @throws {Error} If the request fails
    */
   async getTransferByMainnetInvoice(
     mainnetInvoice: string,
     networkId: number
   ): Promise<TransferByMainnetInvoiceResponse | null> {
     try {
-      const { data } = await this.axios.get<TransferByMainnetInvoiceResponse>(
+      const { data } = await this.http.get<TransferByMainnetInvoiceResponse>(
         `${this.basePath}/transfer-by-mainnet-invoice`,
         {
           params: {
@@ -203,8 +253,6 @@ class UtexoBridgeApiClient {
 export function getBridgeAPI(
   network: UtxoNetworkPreset = 'mainnet'
 ): UtexoBridgeApiClient {
-  const axiosInstance = axios.create({
-    baseURL: DEFAULT_GATEWAY_BASE_URLS[network],
-  });
-  return new UtexoBridgeApiClient(axiosInstance);
+  const httpClient = new FetchClient(DEFAULT_GATEWAY_BASE_URLS[network]);
+  return new UtexoBridgeApiClient(httpClient);
 }
