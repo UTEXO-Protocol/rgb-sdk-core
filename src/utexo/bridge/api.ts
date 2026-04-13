@@ -95,10 +95,7 @@ class UtexoBridgeApiClient {
    * const signature = await client.getBridgeInSignature(request);
    * ```
    */
-  constructor(
-    httpClient: FetchClient,
-    basePath: string = '/v1/utexo/bridge'
-  ) {
+  constructor(httpClient: FetchClient, basePath: string = '/v1/utexo/bridge') {
     this.http = httpClient;
     this.basePath = basePath;
   }
