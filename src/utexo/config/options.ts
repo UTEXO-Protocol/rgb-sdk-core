@@ -25,4 +25,8 @@ export interface ConfigOptions {
    * vssBackup() / vssBackupInfo() build config from mnemonic + this URL when config is not passed.
    */
   vssServerUrl?: string;
+  /**
+   * When true, the UTEXO RGB wallet (rgb-lib) may reuse the same receive addresses. Default: false.
+   */
+  reuseAddresses?: boolean;
 }

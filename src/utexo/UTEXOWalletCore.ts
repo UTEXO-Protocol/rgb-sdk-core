@@ -187,6 +187,16 @@ export abstract class UTEXOWalletCore
     return this.utexoWallet!.getAddress();
   }
 
+  async rotateVanillaAddress(): Promise<string> {
+    this.ensureInitialized();
+    return this.utexoWallet!.rotateVanillaAddress();
+  }
+
+  async rotateColoredAddress(): Promise<string> {
+    this.ensureInitialized();
+    return this.utexoWallet!.rotateColoredAddress();
+  }
+
   async listUnspents(): Promise<Unspent[]> {
     this.ensureInitialized();
     return this.utexoWallet!.listUnspents();
