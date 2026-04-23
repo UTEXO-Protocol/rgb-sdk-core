@@ -408,7 +408,7 @@ export abstract class UTEXOWalletCore
     }
 
     const destinationInvoice = await this.utexoWallet!.witnessReceive({
-      assetId: '',
+      assetId: destinationAsset.assetId,
       amount: params.amount,
       minConfirmations: params.minConfirmations,
       durationSeconds: params.durationSeconds,
@@ -544,7 +544,7 @@ export abstract class UTEXOWalletCore
     }
 
     const destinationInvoice = await this.utexoWallet!.witnessReceive({
-      assetId: '',
+      assetId: destinationAsset.assetId,
       amount: asset.amount,
     });
 
