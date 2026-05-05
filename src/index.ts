@@ -3,6 +3,7 @@
 
 // Types
 export * from './types/wallet-model';
+export * from './types/rln-model';
 
 // Crypto types (Network, NetworkVersions, BIP32Interface, etc.)
 export type {
@@ -66,6 +67,9 @@ export type {
   IOnchainProtocol,
   IUTEXOProtocol,
 } from './interfaces/IUTEXOProtocol';
+export type { IRlnWalletBinding } from './interfaces/IRlnWalletBinding';
+export type { IRlnNodeBinding } from './interfaces/IRlnNodeBinding';
+export type { IRlnSdkBinding } from './interfaces/IRlnSdkBinding';
 
 // BaseWalletManager abstract class
 export { BaseWalletManager } from './wallet/BaseWalletManager';
