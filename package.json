@@ -7,7 +7,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -33,8 +34,7 @@
     "@noble/hashes": "^2.0.1",
     "@noble/secp256k1": "3.0.0",
     "@scure/bip32": "^2.0.1",
-    "@scure/bip39": "^2.0.1",
-    "axios": "^1.8.4"
+    "@scure/bip39": "^2.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
