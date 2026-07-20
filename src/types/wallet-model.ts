@@ -113,6 +113,8 @@ export interface SendAssetBeginRequestModel {
   donation?: boolean;
   feeRate?: number;
   minConfirmations?: number;
+  /** Skip the wallet sync the node performs before building the transfer. */
+  skipSync?: boolean;
 }
 
 export interface SendAssetEndRequestModel {
@@ -325,6 +327,9 @@ export enum AssetSchema {
   Nia = 'Nia',
   Uda = 'Uda',
   Cfa = 'Cfa',
+  /** Core already models IFA (`AssetIfa`, `IssueAssetIfaRequestModel`,
+   *  `ListAssets.ifa`); the enum was the one place it was missing. */
+  Ifa = 'Ifa',
 }
 
 export interface Media {

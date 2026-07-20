@@ -62,6 +62,10 @@ export type {
 export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
 export type {
+  IUTEXOWallet,
+  UTEXOWalletCreateParams,
+} from './interfaces/IUTEXOWallet';
+export type {
   ILightningProtocol,
   IOnchainProtocol,
   IUTEXOProtocol,

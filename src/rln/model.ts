@@ -41,11 +41,22 @@ export interface LightningChannel {
 }
 
 export interface OpenChannelParams {
+  /** Peer pubkey, optionally `pubkey@host:port` when the peer is not connected. */
   peerPubkey: string;
   capacitySat: number | bigint;
   isPublic: boolean;
   assetId?: string;
   assetLocalAmount?: number | bigint;
+  /** Sats pushed to the peer at open. Default 0. */
+  pushMsat?: number | bigint;
+  /** Open an anchor-outputs channel. Default true. */
+  withAnchors?: boolean;
+  feeBaseMsat?: number | null;
+  feeProportionalMillionths?: number | null;
+  /** Caller-supplied temporary channel id (advanced). */
+  temporaryChannelId?: string | null;
+  pushAssetAmount?: number | bigint | null;
+  virtualOpenMode?: string | null;
 }
 
 export interface OpenChannelResult {

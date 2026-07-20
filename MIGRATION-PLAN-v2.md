@@ -1,20 +1,56 @@
 # RGB SDK — Aligned Migration Plan (v2)
 
 > Scope: `rgb-sdk-core` · `rgb-sdk-web` · `rgb-sdk-rn`
-> Supersedes: `Migration.md` (2026-07-14 draft)
-> Date: 2026-07-20 · rev 2
-> Status: **revised after code audit + review feedback**
+> Supersedes: `Migration.md` (2026-07-14 draft) — **that file is now stale; see
+> the note at the end of §0**
+> Date: 2026-07-20 · rev 3
+> Status: **steps 1–5 implemented; step 6 (conformance suite) outstanding**
+
+---
+
+## Implementation status
+
+| # | Work | State |
+|---|------|-------|
+| 1 | Bridge removal + work item A (models) | ✅ done |
+| 2 | Domain types, status vocabulary, normalizers, defaults | ✅ done |
+| 3 | LSP module reconciled into core | ✅ done |
+| 4 | web adopts the contract | ✅ done |
+| 5 | rn adopts the contract | ✅ done |
+| 5b | Remaining independent §7 items (both packages) | ✅ done |
+| 5c | `UTEXOWalletCreateParams` + `IUTEXOWallet` — **the contract itself** | ⬜ **blocker** |
+| 6 | Conformance suite + RLN version lock in CI | ⬜ outstanding |
+
+**Step 5c is the load-bearing one.** Everything above deduplicated code and
+aligned shapes *by hand*; until `IUTEXOWallet` exists and both classes declare
+`implements IUTEXOWallet`, nothing stops the two SDKs drifting apart again — the
+compiler is not yet holding the contract. It also blocks the last §7 rows in both
+packages (`extends UTEXOWalletCreateParams`) and the mechanical 77-method audit
+(§5).
+
+All three repos: `tsc` clean. core 195 tests / 10 suites, web 144 tests. RN carries
+**401 pre-existing lint errors** (531 before this work; deleting the duplicated
+LSP copy removed 130) — unrelated to the migration, worth its own pass.
+
+Net: **~3,900 lines deleted** across the three repos, ~800 added.
+
+**Deferred deliberately:** `IRgbLibBinding` and `WalletInitParams` are still in
+core. Work item A said "delete outright — zero implementations remain"; that is
+**false** — web extends both (`IRlnWalletBinding extends IRgbLibBinding`,
+`RlnWalletInitParams extends Partial<WalletInitParams>`). They can only go once
+`UTEXOWalletCreateParams` and the promoted binding interfaces exist (§5).
 
 ---
 
 ## 0. Audit summary
 
-The v1 plan's diagnosis is correct and its work-item structure is sound. Nothing
-in it has been implemented yet: core still exports `IRgbLibBinding`,
-`UTEXOWalletCore`, and `WalletInitParams`; there is no `rln-model.ts`, no
-lightning types, and no `lsp/` directory in core. All work items A–E are open.
+The v1 plan's diagnosis is correct and its work-item structure is sound. At the
+time of the audit nothing in it had been implemented: core still exported
+`IRgbLibBinding`, `UTEXOWalletCore`, and `WalletInitParams`; there was no
+`rln-model.ts`, no lightning types, and no `lsp/` directory in core.
 
-Findings from the audit:
+Findings from that audit — each is now either implemented or recorded as a
+deferred follow-up (see Implementation status above):
 
 | # | Finding | Effect |
 |---|---------|--------|
@@ -26,6 +62,18 @@ Findings from the audit:
 | **N1** | **Bridge is dead surface** (~464 LOC in core + RN re-exports). Its only interface consumer, `getOnchainSendStatus`, already throws on both platforms. | Full removal — new §2 |
 
 Branch state at audit: core on `feat/rln-wasm-v1`, web and rn both on `feat/core`.
+
+### ⚠️ `Migration.md` (v1) is stale — do not follow it
+
+It is kept for history only. Three of its instructions are now known-wrong:
+
+| v1 says | Reality |
+|---|---|
+| Delete `IRgbLibBinding`, `WalletInitParams` — "zero implementations remain" | web extends **both**; deleting them breaks it |
+| `RlnInvoiceStatus = 'Pending' \| 'Paid' \| 'Expired'` | `'Paid'` is not a node value; the enum has 7 variants (§4) |
+| LSP copies are "~95% identical", take web's as baseline | `UtexoLsp.ts` had 353 changed lines; RN carried two later feature PRs |
+
+Delete or archive it once the changelog table is written.
 
 ### Release line — note, not a blocker
 
@@ -121,25 +169,76 @@ Define in core: `LightningChannel` (web's domain shape + RN's `shortChannelId`,
 `CreateHodlInvoiceParams`/`HodlInvoiceResult`, `ApayNewResponse`/`ApayHashEntry`
 (already field-identical), `LdkVssBackupInfo`.
 
-Canonical status vocabulary:
+### Canonical status vocabulary — taken from the Rust source
+
+**v1 proposed `RlnInvoiceStatus = 'Pending' | 'Paid' | 'Expired'`. That is
+wrong on two counts** and was not implemented. The authoritative enums are in
+`rgb-lightning-node/src/uniffi_api/types.rs`:
 
 ```ts
-export type RlnInvoiceStatus = 'Pending' | 'Paid' | 'Expired';
-export type RlnPaymentStatus = 'Pending' | 'Claimable' | 'Claiming'
-                             | 'Succeeded' | 'Cancelled' | 'Failed';
+// mirrors Rust InvoiceStatus (7 variants)
+export type RlnInvoiceStatus =
+  | 'Pending' | 'Claimable' | 'Claiming'
+  | 'Succeeded' | 'Cancelled' | 'Failed' | 'Expired';
+
+// mirrors Rust HtlcStatus (6 variants — no Expired)
+export type RlnPaymentStatus =
+  | 'Pending' | 'Claimable' | 'Claiming'
+  | 'Succeeded' | 'Cancelled' | 'Failed';
+
+// mirrors Rust ChannelStatus
+export type RlnChannelStatus = 'Opening' | 'Opened' | 'Closing';
 ```
 
-**Lightning statuses are NOT folded into `TransferStatus`.** That fold is an
-rgb-lib-era artifact and is lossy: `WaitingCounterparty` is an RGB consignment
-concept with no LN meaning, and `Claimable`/`Claiming`/`Expired`/`Cancelled`/
-`Failed` collapse into single buckets — the two SDKs even fold them
-*differently* today (`SUCCEEDED → 'Settled'` in RN vs web's own mapping).
-`TransferStatus` stays on-chain only. Apps wanting one status column fold it in
-their UI layer; core may ship an optional `foldLnStatusForDisplay()` helper that
-is not part of any return type.
+1. **`'Paid'` does not exist in the node.** rgb-sdk-web invented it; the real
+   state is `'Succeeded'`. Accepted as a legacy input alias by the normalizers,
+   never emitted.
+2. **A 3-value invoice vocabulary discards `Claimable`/`Claiming`** — the exact
+   HODL states v1 complains about losing two paragraphs earlier.
+
+**Three casings exist in the wild**, which is why normalizers are mandatory and
+casts are not acceptable:
+
+| Producer | Casing | Example |
+|---|---|---|
+| UniFFI / RN binding | `SCREAMING_SNAKE` | `'SUCCEEDED'` |
+| wasm runtime | `lowercase` | `'succeeded'` (see `ln_node.rs`) |
+| Rust / docs / core | `PascalCase` | `'Succeeded'` |
+
+Core exports `normalizeInvoiceStatus` / `normalizePaymentStatus` /
+`normalizeChannelStatus` (plus non-throwing `try*` variants) accepting all three
+plus the legacy aliases `Paid` / `Settled` / `Success` / `Canceled`.
+
+### Lightning and on-chain statuses are fully separate — no fold, either way
+
+**`TransferStatus` is RGB on-chain only. Lightning methods return the node's own
+vocabulary.** The fold is not deprecated-but-present; it is **removed**:
+
+| Removed | Why |
+|---|---|
+| `mapInvoiceStatus`, `mapPaymentStatus` (both SDKs) | lossy, and bucketed *differently* per platform |
+| `getLightningReceiveRequest`, `getLightningSendRequest` (both SDKs) | returned `TransferStatus` for a Lightning operation |
+
+The concrete collision that motivated it — same node state, two answers:
+
+```
+RN:  PENDING → WaitingCounterparty   CLAIMABLE/CLAIMING → WaitingConfirmations
+web: Pending → WaitingCounterparty   Claimable/Claiming → (dropped, null)
+```
+
+Replaced by `getLightningReceiveStatus(id): Promise<RlnInvoiceStatus>` and
+`getLightningSendStatus(id): Promise<RlnPaymentStatus | null>` on both SDKs.
+An app that wants one unified status column folds it in its own UI layer, where
+the product decision belongs — core ships no such helper by default.
+
+A third vocabulary stays separate too: the LSP's own `ReceiveStatus`
+(`Pending`/`Succeeded`/`Failed`/`Expired`) describes the LSP's coarser view of a
+mapped receive, not the HTLC. It is not folded into either of the other two.
 
 RN keeps its `Rln*` wire types locally as the uniffi contract — binding input,
-never a public return type.
+never a public return type. Where a wire name collides with a core name, the
+**wire** one is suffixed (`RlnInvoiceStatusWire`, `RlnPaymentStatusWire`,
+`RlnChannelStatusWire`), so one identifier never means two things.
 
 ### 4a. Where translation lives — corrected
 
@@ -203,6 +302,42 @@ The return type is enforced by the compiler; the runtime *values* are enforced
 by the core normalizers plus the conformance suite (§11). This gets the same
 anti-drift guarantee without pretending the two wire formats are one.
 
+### 4b. No `*Raw` escape hatches — expand the domain type instead
+
+An intermediate step kept raw duplicates next to the mapped methods
+(`listChannelsRaw`, `getNodeInfoRaw`, `listPaymentsRaw`, `decodeLnInvoiceRaw`,
+`invoiceStatusRaw`). **They were removed; do not reintroduce them.**
+
+A raw duplicate is a second public surface for the same data. It re-creates the
+problem this plan exists to solve: apps split across two shapes, the wire type
+leaks back into the public API, and the "shared contract" describes only the
+half of the surface people didn't use. It also does not port — a `*Raw` method
+returning a UniFFI struct has no meaning for a wasm, Swift, or Kotlin consumer.
+
+**The rule: if a caller needs a field the domain type lacks, add the field to
+the core domain type.** It is shared by definition — every platform that can
+produce it, and every platform that later wants it, benefits from one edit.
+
+Worked example: deleting `listPaymentsRaw` was blocked by exactly one field,
+`paymentType`. The fix was four lines in core —
+
+```ts
+export type LightningPaymentType = 'Outbound' | 'InboundAutoClaim' | 'InboundHodl';
+// … plus `paymentType?: LightningPaymentType` on LightningPayment
+```
+
+— after which the raw method had nothing left to offer.
+
+**Signal that this worked:** once the `*Raw` methods were gone, `RlnNodeInfo`,
+`RlnChannel`, `RlnPayment` and `RlnDecodeLnInvoiceResponse` became *unused
+imports* in RN's wallet. The wire types are now confined to the binding and its
+mappers, which is precisely the boundary a Swift/Kotlin binding would also sit
+behind.
+
+If a platform genuinely needs an un-mapped native handle, that is a documented
+**platform extra** (§8) with a name that cannot be mistaken for the shared
+contract — not a shadow copy of a contract method.
+
 Delete web's `mapInvoiceStatus`/`mapPaymentStatus` and RN's inline
 `SCREAMING_SNAKE` maps — both are replaced by the core normalizers.
 
@@ -219,7 +354,7 @@ or **rename** (platform-specific despite the shared name → `openChannelRaw`,
 
 | Method | web today | rn today | Aligned (core) |
 |--------|-----------|----------|----------------|
-| constructor | `new UTEXOWallet(params)` | `new UTEXOWallet(params, signer)` | `new UTEXOWallet(params, signer?)` — signer stays a **separate positional collaborator**, optional; each platform defaults it internally (RN → `PasswordRLNSigner` from `params.password`; web → `RlnSigner`). See §5a |
+| constructor | `new UTEXOWallet(params)` | `new UTEXOWallet(params, signer)` | `new UTEXOWallet(params, signer)` — signer is a **separate positional collaborator**. Optional on web (its params already carry `mnemonic`, so `RlnSigner` can default); **required on RN** — see §5a |
 | HODL create | `createHodlLnInvoice(p): LightningInvoice` | `createHodlInvoice(p): HodlInvoice` | `createHodlInvoice(p): LightningInvoice` |
 | `connectPeer` | `(peerAddr, peerPubkey)` | `(peerPubkeyAndAddr)` | `(peerUri: string)` — `pubkey@host:port`, existing `peerUri()` helper |
 | `closeChannel` | `(id, peerPubkey?, force=false): void` | `(id, peerPubkey, force): Promise<void>` | `(id, peerPubkey?, force=false): Promise<void>` |
@@ -276,6 +411,18 @@ field.** Rationale:
   so choose the one with better ergonomics. (If it must be enforced, that needs
   an explicit `interface UTEXOWalletConstructor { new (params: UTEXOWalletCreateParams,
   signer?: IWalletSigner): IUTEXOWallet }` applied at the call site — optional.)
+
+**Optional on web, required on RN — and that asymmetry is correct.** An earlier
+revision said "optional on both; RN defaults to `PasswordRLNSigner` built from
+`params.password`". That is not implementable: `PasswordRLNSigner(password,
+keys?)` needs a password **and** a mnemonic, and `UTEXOWalletNodeParams` carries
+neither. Adding them would put credentials into the plain-config object this
+very section argues they must stay out of. Web is different — its params already
+carry `mnemonic`, so defaulting `RlnSigner` there costs nothing.
+
+So: the **arity and position** are shared (`(params, signer)`); whether the
+second argument may be omitted is a platform detail, driven by whether that
+platform's params can construct a sensible default.
 
 **Open design item — the second parameter needs a type both platforms satisfy.**
 Today the two "signers" are unrelated concepts that share a name:
@@ -380,8 +527,8 @@ interfaces — no core change required, which is the §9.3 flexibility test.
 | File | Change |
 |------|--------|
 | `src/types/rln-model.ts` | Delete; `src/rln` barrel re-exports from core (the file header already promises this) |
-| `src/interfaces/IRln{NodeBinding,WalletBinding,SdkBinding}.ts` | Delete after promotion to core; barrel re-exports |
-| `src/types/rgb-model.ts` | **Conflict — reconcile, don't move.** Redefines `Unspent`/`Utxo`/`RgbAllocation` differently from core (`pendingBlinded` on `Utxo` here vs `Unspent` in core; `RgbAllocation.assignment` is a `BindingAssignment` map vs core's `Assignment` union), and both are star-exported from `index.ts` today. Decide canonical shape in core, delete local |
+| `src/interfaces/IRln{NodeBinding,WalletBinding,SdkBinding}.ts` | **Stay local — decision, not a leftover.** v1 said "delete after promotion to core". They describe the *wasm* binding surface; RN's equivalent is `IRLN` over uniffi. The two are genuinely different contracts, not two views of one, so promoting them would force a false shared shape. Per §1 they are platform extras. They import shared *model* types from `../rln` (which now come from core) — that is the part that had to be shared, and it is. |
+| `src/types/rgb-model.ts` | ✅ **done — and it was a live bug, not just duplication.** The local `Unspent`/`Utxo`/`RgbAllocation` were star-exported from `index.ts`, shadowing core with different shapes — while `listUnspents()` actually returned *core's* `Unspent`. The exported types disagreed with the runtime values. Deleted; `index.ts` exports core's. `BindingAssignment` + `DecodeRgbInvoiceResponse` stay as genuine web-only wire shapes |
 | `src/utexo/utexo-wallet.ts` | Drop inline widenings (`createLightningInvoice(Omit<…> & {asset?; paymentHash?})`, `payLightningInvoice(params & {assetAmount?})`) — take fixed core models directly; `onchainReceive` returns core's enriched `OnchainReceiveResponse` (drop the `& InvoiceReceiveData` intersection); delete `mapInvoiceStatus`/`mapPaymentStatus` → core normalizers (§4a); keep local shape mappers typed as `WireMapper<…>`; add `getLightningReceiveStatus`/`getLightningSendStatus`; **constructor gains the optional second arg `(params, signer?: ISigner)`**, defaulting to the existing internally-built `RlnSigner` (§5a); apply §5 renames as **replacements** |
 | `src/wallet/rln-wallet-manager.ts` | `RlnWalletInitParams extends UTEXOWalletCreateParams` instead of `Partial<WalletInitParams>` |
 | `src/binding/RlnDefaults.ts` | Delete LSP defaults + local `DEFAULT_INDEXER_URLS` (→ core §6); keep web-only `DEFAULT_RLN_URLS` |
@@ -393,7 +540,7 @@ interfaces — no core change required, which is the §9.3 flexibility test.
 | File | Change |
 |------|--------|
 | `src/index.ts` | **Remove bridge re-exports** (`getBridgeAPI`, `BridgeInSignatureRequest/Response`) — §2. Re-export moved core names; keep `IRLN`/wire types for binding-level consumers |
-| `src/binding/rln-types.ts` | Keep **only** `Rln*` wire types (uniffi contract); remove the core re-export block at the top |
+| `src/binding/rln-types.ts` | ✅ done — core re-export block removed; file is now purely `Rln*` wire types. `GetLightningSendFeeEstimateRequestModel` was the only name that depended on the block; it is now exported explicitly from `index.ts` |
 | `src/binding/Interfaces.ts` | `BitcoinNetwork` (+ `'signet_custom'`), `AssetSchema` const, `toNativeNetwork` → core `utils/network`; file keeps native-only leftovers or is deleted |
 | `src/wallet/utexo-wallet.ts` | Delete local widening models (`RlnOnchainReceiveRequestModel`, `RlnSendAssetRequestModel`, `RlnOnchainSendRequestModel`, `RlnCreateLightningInvoiceRequestModel`) → folded into core (§3); `UTEXOWalletNodeParams extends UTEXOWalletCreateParams`; **constructor keeps `(params, signer?)` — `signer` becomes optional**, defaulting to `PasswordRLNSigner` built from `params.password` (§5a); public methods return **core** types via local `WireMapper` implementations: `getNodeInfo → LightningNodeInfo`, `listChannels → LightningChannel[]`, `keysend → SendPaymentResult`, `decodeLnInvoice → DecodedLnInvoice`, `openChannel → {temporaryChannelId}` (raw → `openChannelRaw`), `createHodlInvoice → LightningInvoice`, `connectPeer(peerUri)`, `estimateFeeRate → {feeRate}`, `onchainReceive` full data; delete `mapInvoiceStatus` + the inline `SCREAMING_SNAKE` maps → core normalizers; add the two `*Status` methods |
 | `src/wallet/network-defaults.ts` | Delete LSP defaults (→ core); keep `resolveUnlockParams`/`getNetworkDefaults` reading core tables |
@@ -407,6 +554,10 @@ platform extra (rename it) or a leftover (delete it).
 
 ## 8. Explicitly NOT shared
 
+- **Binding interfaces, both sides.** web's `IRlnNodeBinding` /
+  `IRlnWalletBinding` / `IRlnSdkBinding` (wasm) and RN's `IRLN` (uniffi) each
+  describe their own generator's surface. They stay in their packages. What is
+  shared is the *model* types they traffic in — those come from core.
 - **web (WASM):** `initRlnWasm`; begin/sign/end trios (`createUtxosBegin/End`,
   `sendBegin/End`, `sendBtcBegin/End`, `inflate*`); JS BDK PSBT signing
   (`signPsbt`, `estimateFee`); `signMessage`/`verifyMessage`/`getXpub`;
@@ -516,27 +667,56 @@ Every step leaves all three repos green (`build` + `test`). Core is consumed
 locally (`npm link` / `file:`) during development; production publishes are
 manual.
 
-| # | Repo | Work |
-|---|------|------|
-| 1 | core | §2 bridge removal + §3 work item A (types) — rescue `FetchClient` first |
-| 2 | core | §4 domain types + status vocabulary + §4a normalizers; §6.1–6.3 defaults |
-| 3 | core | §6.4 LSP reconciliation behind `ILspWallet` (own PR — largest diff) |
-| 4 | web | §7 web checklist |
-| 5 | rn | §7 rn checklist (incl. bridge re-export removal) |
-| 6 | both | §11 conformance suite + §10 RLN version lock in CI |
+| # | Repo | Work | State |
+|---|------|------|-------|
+| 1 | core | §2 bridge removal + §3 work item A (types) — rescue `FetchClient` first | ✅ |
+| 2 | core | §4 domain types + status vocabulary + §4a normalizers; §6.1–6.3 defaults | ✅ |
+| 3 | core | §6.4 LSP reconciliation behind `ILspWallet` (own PR — largest diff) | ✅ |
+| 4 | web | §7 web checklist | ✅ |
+| 5 | rn | §7 rn checklist (incl. bridge re-export removal) | ✅ |
+| 6 | both | §11 conformance suite + §10 RLN version lock in CI | ⬜ |
 
 Steps 4 and 5 are independent and can run in parallel once step 3 lands.
+
+### Follow-ups outside the numbered steps
+
+- **Changelog old→new table** (blocking a release, not a step): the breaking
+  changes are listed in §13. Both demo apps should migrate in the same PR as
+  their SDK — that is what proves the table is complete.
+- **`IRgbLibBinding` / `WalletInitParams` removal** — deferred (see the
+  Implementation status table). Needs `UTEXOWalletCreateParams` and the promoted
+  binding interfaces first.
+- **RN lint debt** — 401 pre-existing errors, mostly `no-unused-vars` on
+  `_`-prefixed stub params plus prettier formatting (~100 auto-fixable). Not
+  caused by this migration, but it makes RN's lint signal useless for catching
+  real problems.
+- **D2 indexer table** — still unverified against deployed infra (§6.2).
 
 ---
 
 ## 13. Risks
 
-- **Hard break, no aliases.** Apps migrate in one step per package: LN status
-  values change (`'Settled'` → `'Paid'`/`'Succeeded'`), methods removed
-  (bridge exports, `getLightningReceiveRequest`, `payLightningInvoiceBegin/End`),
-  signatures renamed (§5). Acceptable at beta. **The changelog must carry a
-  complete old→new mapping table, and both demo apps migrate in the same PR as
-  their SDK — that is what proves the table is complete.**
+- **Hard break, no aliases.** Apps migrate in one step per package. Acceptable at
+  beta. **The changelog must carry a complete old→new mapping table, and both
+  demo apps migrate in the same PR as their SDK — that is what proves the table
+  is complete.** The breaking set:
+
+  | Old | New |
+  |---|---|
+  | `status === 'Paid'` (web LN) | `status === 'Succeeded'` — `'Paid'` never existed in the node |
+  | `status === 'Settled'` on a **Lightning** path | `'Succeeded'` (`'Settled'` remains valid for RGB on-chain `TransferStatus`) |
+  | `getLightningReceiveRequest` / `getLightningSendRequest` | `getLightningReceiveStatus` / `getLightningSendStatus` — return LN statuses, not `TransferStatus` |
+  | `connectPeer(addr, pubkey)` (web) | `connectPeer(peerUri)` — `pubkey@host:port` |
+  | `createHodlLnInvoice` (web) | `createHodlInvoice` → `LightningInvoice` |
+  | `estimateFeeRate(): number` (rn) | `→ { feeRate }` |
+  | `HodlInvoiceResult { paymentHash, status }` (web) | `{ changed }` — matches the node |
+  | `channel.isActive` (web) | `channel.ready` |
+  | `payment.rawStatus` (web) | `payment.status` — now canonical, no raw duplicate |
+  | `payLightningInvoice({ maxFee })` | removed — unsupported by RLN |
+  | `getBridgeAPI`, `TransferStatuses`, `BridgeIn*`, `UTEXOWalletCore` (rn re-exports) | removed with the bridge |
+  | `DEFAULT_GATEWAY_BASE_URLS` (core) | removed with the bridge |
+  | `listChannelsRaw` / `getNodeInfoRaw` / `listPaymentsRaw` / `decodeLnInvoiceRaw` / `invoiceStatusRaw` | never shipped — the domain methods return the full data (§4b) |
+
 - **LSP reconciliation (§6.4) is the highest-regression-risk item.** 353 changed
   lines across two live feature branches. Own PR, explicit decision log per
   delta, exercised against a real LSP on regtest before merge.

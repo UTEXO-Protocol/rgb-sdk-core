@@ -9,6 +9,12 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs",
       "default": "./dist/index.mjs"
+    },
+    "./conformance": {
+      "types": "./dist/conformance/index.d.ts",
+      "import": "./dist/conformance/index.mjs",
+      "require": "./dist/conformance/index.cjs",
+      "default": "./dist/conformance/index.mjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -28,7 +34,8 @@
     "prettier": "prettier --write \"**/*.{js,ts}\"",
     "version:patch": "npm version patch && git push && git push --tags && npm publish --access public",
     "version:minor": "npm version minor && git push && git push --tags && npm publish --access public",
-    "version:major": "npm version major && git push && git push --tags && npm publish --access public"
+    "version:major": "npm version major && git push && git push --tags && npm publish --access public",
+    "check:rln-versions": "node scripts/check-rln-versions.mjs"
   },
   "dependencies": {
     "@noble/hashes": "^2.0.1",
@@ -70,5 +77,6 @@
     "tabWidth": 2,
     "trailingComma": "es5",
     "useTabs": false
-  }
+  },
+  "sideEffects": false
 }
