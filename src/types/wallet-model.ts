@@ -256,20 +256,6 @@ export type TransferStatus =
   | 'Settled'
   | 'Failed';
 
-/** Bridge transfer statuses (from UTEXO bridge API) */
-export type BridgeTransferStatus =
-  | 'Unspecified'
-  | 'Confirming'
-  | 'Canceled'
-  | 'Finished'
-  | 'Waiting'
-  | 'Cancelling'
-  | 'Failed'
-  | 'Fetching';
-
-/** Unified status for on-chain operations (from RGB wallet or bridge) */
-export type OnchainSendStatus = TransferStatus | BridgeTransferStatus;
-
 // ─── UTXOs & Balances ─────────────────────────────────────────────────────────
 
 export interface Unspent {
@@ -503,7 +489,7 @@ export interface ListLightningPaymentsResponse {
   payments: LightningSendRequest[];
 }
 
-// ─── UTEXO Protocol — Onchain (cross-network bridge transfers) ─────────────────
+// ─── UTEXO Protocol — Onchain ─────────────────────────────────────────────────
 
 export interface OnchainReceiveRequestModel extends InvoiceRequest {
   amount: number;

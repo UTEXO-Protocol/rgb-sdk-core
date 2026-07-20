@@ -24,7 +24,6 @@ import type {
   SendAssetEndRequestModel,
   Transfer,
   TransferStatus,
-  OnchainSendStatus,
 } from '../types/wallet-model';
 
 /**
@@ -110,12 +109,6 @@ export class OnchainProtocol implements IOnchainProtocol {
     throw new Error('onchainSend not implemented');
   }
 
-  async getOnchainSendStatus(
-    _send_id: string
-  ): Promise<OnchainSendStatus | null> {
-    throw new Error('getOnchainSendStatus not implemented');
-  }
-
   async listOnchainTransfers(_asset_id?: string): Promise<Transfer[]> {
     throw new Error('listOnchainTransfers not implemented');
   }
@@ -152,12 +145,6 @@ export class UTEXOProtocol extends LightningProtocol implements IUTEXOProtocol {
     mnemonic?: string
   ): Promise<OnchainSendResponse> {
     return this.onchainProtocol.onchainSend(params, mnemonic);
-  }
-
-  async getOnchainSendStatus(
-    send_id: string
-  ): Promise<OnchainSendStatus | null> {
-    return this.onchainProtocol.getOnchainSendStatus(send_id);
   }
 
   async listOnchainTransfers(asset_id?: string): Promise<Transfer[]> {

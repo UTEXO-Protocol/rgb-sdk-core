@@ -70,9 +70,6 @@ export type {
 // BaseWalletManager abstract class
 export { BaseWalletManager } from './wallet/BaseWalletManager';
 
-// UTEXOWalletCore abstract class
-export { UTEXOWalletCore } from './utexo/UTEXOWalletCore';
-
 // UTEXO Protocol base classes
 export {
   LightningProtocol,
@@ -96,32 +93,11 @@ export type {
   UtxoNetworkId,
 } from './utexo/utils/network';
 export { testnetPreset, mainnetPreset } from './utexo/config/utexo-presets';
-export { DEFAULT_GATEWAY_BASE_URLS } from './utexo/config/gateway';
 export { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './utexo/config/vss';
 export type { ConfigOptions } from './utexo/config/options';
 
-// Bridge client
-export {
-  getBridgeAPI,
-  encodeTransferStatus,
-  FetchClient,
-} from './utexo/bridge/api';
-export type {
-  NetworkAddress,
-  TransferType,
-  Estimation,
-  BridgeInSignatureRequest,
-  BridgeInSignatureResponse,
-  SubmitTransactionRequest,
-  SubmitTransactionResponse,
-  VerifyBridgeInRequest,
-  ReceiverInvoiceResponse,
-  TokenInfo,
-  TransactionHash,
-  TransferByMainnetInvoiceResponse,
-  ApiError,
-} from './utexo/bridge/types';
-export { TransferStatuses } from './utexo/bridge/types';
+// HTTP transport (injectable; used by core clients such as the LSP client)
+export { FetchClient } from './utils/fetch-client';
 
 // Crypto — VSS key derivation
 export { deriveVssSigningKeyFromMnemonic } from './crypto/vss-keys';
@@ -132,9 +108,6 @@ export type { SignMessageParams, VerifyMessageParams } from './crypto/message';
 
 // Crypto — PSBT utilities (pure, no platform deps)
 export { detectPsbtType, deriveDescriptors } from './crypto/psbt';
-
-// UTEXO helpers
-export { decodeBridgeInvoice } from './utexo/utils/helpers';
 
 // UTEXO restore helpers (pure, no fs)
 export { buildVssConfigFromMnemonic, getBackupStoreId } from './utexo/restore';

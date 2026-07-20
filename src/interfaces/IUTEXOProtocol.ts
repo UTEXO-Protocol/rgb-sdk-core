@@ -8,7 +8,6 @@ import type {
   OnchainReceiveResponse,
   OnchainSendRequestModel,
   OnchainSendResponse,
-  OnchainSendStatus,
   ListLightningPaymentsResponse,
   SendAssetEndRequestModel,
   Transfer,
@@ -66,8 +65,6 @@ export interface IOnchainProtocol {
     params: OnchainSendRequestModel,
     mnemonic?: string
   ): Promise<OnchainSendResponse>;
-
-  getOnchainSendStatus(send_id: string): Promise<OnchainSendStatus | null>;
 
   listOnchainTransfers(asset_id?: string): Promise<Transfer[]>;
 }
