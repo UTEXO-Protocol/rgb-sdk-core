@@ -104,9 +104,16 @@ export interface DecodedLnInvoice {
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
+/** Direction/claim mode of a payment, as reported by the node. */
+export type LightningPaymentType =
+  | 'Outbound'
+  | 'InboundAutoClaim'
+  | 'InboundHodl';
+
 export interface LightningPayment {
   paymentHash: string;
   status: RlnPaymentStatus;
+  paymentType?: LightningPaymentType;
   amtMsat?: number | bigint;
   assetId?: string;
   assetAmount?: number | bigint;

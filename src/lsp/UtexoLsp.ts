@@ -29,7 +29,6 @@ import {
   type LspOnchainSendResponse,
   type LspLnParams,
   type ReceiveSettlementOutcome,
-  normalizeReceiveStatus,
   peerUri,
 } from './lsp-types';
 import {
@@ -254,13 +253,17 @@ export class UtexoLsp {
       this.checkAbort(opts.signal);
 
       await this.wallet.syncWallet();
-      const raw = await this.wallet.getLightningReceiveRequest(lnInvoice);
-      const status = normalizeReceiveStatus(raw as string | null | undefined);
+      // The node's own vocabulary — no TransferStatus fold in between.
+      const status = await this.wallet.getLightningReceiveStatus(lnInvoice);
 
       opts.onProgress?.(status);
 
       if (status === 'Succeeded') return 'settled';
-      if (status === 'Failed' || status === 'Expired') {
+      if (
+        status === 'Failed' ||
+        status === 'Expired' ||
+        status === 'Cancelled'
+      ) {
         throw new LspSettlementError('ln_invoice', status);
       }
 

@@ -151,6 +151,17 @@ export function tryNormalizePaymentStatus(
   }
 }
 
+/** Non-throwing variant — returns `null` instead of throwing on unknown input. */
+export function tryNormalizeChannelStatus(
+  raw: unknown
+): RlnChannelStatus | null {
+  try {
+    return normalizeChannelStatus(raw);
+  } catch {
+    return null;
+  }
+}
+
 /** True for states where the invoice/payment can no longer change. */
 export function isTerminalPaymentStatus(
   status: RlnPaymentStatus | RlnInvoiceStatus

@@ -1,3 +1,4 @@
+import type { RlnInvoiceStatus } from '../rln/status';
 import type { ReceiveStatus } from './lsp-types';
 
 /** No usable RGB channel appeared with the LSP peer before the timeout. */
@@ -33,12 +34,19 @@ export class LspLiquidityTimeoutError extends Error {
   }
 }
 
-/** Settlement reached a terminal non-success state. */
+/**
+ * Settlement reached a terminal non-success state.
+ *
+ * `status` is the node's own invoice status (`RlnInvoiceStatus`) when the
+ * failure came from polling the wallet, or the LSP's coarser `ReceiveStatus`
+ * when it came from an LSP response. The two vocabularies are deliberately
+ * kept separate rather than folded into one another.
+ */
 export class LspSettlementError extends Error {
   readonly name = 'LspSettlementError';
   constructor(
     public readonly step: 'ln_invoice',
-    public readonly status: ReceiveStatus
+    public readonly status: RlnInvoiceStatus | ReceiveStatus
   ) {
     super(`Settlement ended with status "${status}" at step ${step}`);
   }

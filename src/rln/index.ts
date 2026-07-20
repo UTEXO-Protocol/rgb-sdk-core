@@ -17,6 +17,7 @@ export {
   normalizeChannelStatus,
   tryNormalizeInvoiceStatus,
   tryNormalizePaymentStatus,
+  tryNormalizeChannelStatus,
   isTerminalPaymentStatus,
   isClaimablePaymentStatus,
 } from './status';
@@ -31,6 +32,7 @@ export type {
   HodlInvoiceResult,
   DecodedLnInvoice,
   LightningPayment,
+  LightningPaymentType,
   SendPaymentParams,
   SendPaymentResult,
   KeysendParams,

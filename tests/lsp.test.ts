@@ -34,7 +34,7 @@ function makeWallet(overrides = {}) {
       refillBatchSize: 20,
     }),
     syncWallet: jest.fn().mockResolvedValue(undefined),
-    getLightningReceiveRequest: jest.fn().mockResolvedValue('Pending'),
+    getLightningReceiveStatus: jest.fn().mockResolvedValue('Pending'),
     ...overrides,
   };
 }
@@ -213,7 +213,7 @@ describe('waitForOutboundLiquidity', () => {
 describe('awaitReceiveSettlement', () => {
   it('returns "settled" on Succeeded', async () => {
     const wallet = makeWallet({
-      getLightningReceiveRequest: jest.fn().mockResolvedValue('Succeeded'),
+      getLightningReceiveStatus: jest.fn().mockResolvedValue('Succeeded'),
     });
     await expect(
       new UtexoLsp(wallet, PEER).awaitReceiveSettlement('lnbc1', {
@@ -223,23 +223,11 @@ describe('awaitReceiveSettlement', () => {
     ).resolves.toBe('settled');
   });
 
-  it('accepts the legacy "Settled" spelling as success', async () => {
-    const wallet = makeWallet({
-      getLightningReceiveRequest: jest.fn().mockResolvedValue('Settled'),
-    });
-    await expect(
-      new UtexoLsp(wallet, PEER).awaitReceiveSettlement('lnbc1', {
-        timeoutMs: 1000,
-        pollIntervalMs: 10,
-      })
-    ).resolves.toBe('settled');
-  });
-
-  it.each([['Failed'], ['Expired']])(
+  it.each([['Failed'], ['Expired'], ['Cancelled']])(
     'throws LspSettlementError on %s',
     async (status) => {
       const wallet = makeWallet({
-        getLightningReceiveRequest: jest.fn().mockResolvedValue(status),
+        getLightningReceiveStatus: jest.fn().mockResolvedValue(status),
       });
       await expect(
         new UtexoLsp(wallet, PEER).awaitReceiveSettlement('lnbc1', {

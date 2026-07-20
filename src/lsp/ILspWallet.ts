@@ -17,12 +17,12 @@ import type {
   ApayNewResponse,
   HodlInvoiceResult,
 } from '../rln/model';
+import type { RlnInvoiceStatus } from '../rln/status';
 import type {
   CreateLightningInvoiceRequestModel,
   LightningReceiveRequest,
   LightningSendRequest,
   PayLightningInvoiceRequestModel,
-  TransferStatus,
 } from '../types/wallet-model';
 
 export interface ILspWallet {
@@ -61,11 +61,10 @@ export interface ILspWallet {
   syncWallet(): Promise<unknown>;
 
   /**
-   * Poll an inbound LN receive.
+   * Poll an inbound LN receive, in the node's own status vocabulary.
    *
-   * Kept as the legacy `TransferStatus`-returning shape for now; it is replaced
-   * by `getLightningReceiveStatus` returning `RlnInvoiceStatus` when the
-   * platforms adopt the aligned Lightning surface.
+   * Deliberately not `TransferStatus` — that is an RGB on-chain consignment
+   * vocabulary with no Lightning meaning.
    */
-  getLightningReceiveRequest(id: string): Promise<TransferStatus | null>;
+  getLightningReceiveStatus(id: string): Promise<RlnInvoiceStatus>;
 }
