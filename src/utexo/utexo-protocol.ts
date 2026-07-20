@@ -14,7 +14,6 @@ import type {
   CreateLightningInvoiceRequestModel,
   LightningReceiveRequest,
   LightningSendRequest,
-  GetLightningSendFeeEstimateRequestModel,
   PayLightningInvoiceRequestModel,
   OnchainSendRequestModel,
   OnchainSendResponse,
@@ -23,7 +22,6 @@ import type {
   OnchainReceiveResponse,
   SendAssetEndRequestModel,
   Transfer,
-  TransferStatus,
 } from '../types/wallet-model';
 
 /**
@@ -37,34 +35,6 @@ export class LightningProtocol implements ILightningProtocol {
     _params: CreateLightningInvoiceRequestModel
   ): Promise<LightningReceiveRequest> {
     throw new Error('createLightningInvoice not implemented');
-  }
-
-  async getLightningReceiveRequest(
-    _id: string
-  ): Promise<TransferStatus | null> {
-    throw new Error('getLightningReceiveRequest not implemented');
-  }
-
-  async getLightningSendRequest(_id: string): Promise<TransferStatus | null> {
-    throw new Error('getLightningSendRequest not implemented');
-  }
-
-  async getLightningSendFeeEstimate(
-    _params: GetLightningSendFeeEstimateRequestModel
-  ): Promise<number> {
-    throw new Error('getLightningSendFeeEstimate not implemented');
-  }
-
-  async payLightningInvoiceBegin(
-    _params: PayLightningInvoiceRequestModel
-  ): Promise<string> {
-    throw new Error('payLightningInvoiceBegin not implemented');
-  }
-
-  async payLightningInvoiceEnd(
-    _params: SendAssetEndRequestModel
-  ): Promise<LightningSendRequest> {
-    throw new Error('payLightningInvoiceEnd not implemented');
   }
 
   async payLightningInvoice(

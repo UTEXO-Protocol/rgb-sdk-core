@@ -1,12 +1,5 @@
 // ─── Bitcoin / Network ────────────────────────────────────────────────────────
 
-export type RGBHTTPClientParams = {
-  xpubVan: string;
-  xpubCol: string;
-  masterFingerprint: string;
-  rgbEndpoint: string;
-};
-
 export type BitcoinNetwork =
   | 'mainnet'
   | 'testnet'
@@ -176,18 +169,26 @@ export interface GetFeeEstimationRequestModel {
   blocks: number;
 }
 
-export type GetFeeEstimationResponse = Record<string, number> | number;
+/** Canonical fee-estimation result. */
+export interface GetFeeEstimationResponse {
+  feeRate: number;
+}
 
 // ─── Transactions & Transfers ─────────────────────────────────────────────────
 
-export enum BindingTransactionType {
-  RGB_SEND = 0,
-  DRAIN = 1,
-  CREATE_UTXOS = 2,
-  USER = 3,
-}
-
-export type TransactionType = 'RgbSend' | 'Drain' | 'CreateUtxos' | 'User';
+/**
+ * Transaction kinds emitted by RLN.
+ *
+ * `SendBtc` and `Incoming` are emitted by the node; they previously had no
+ * core counterpart and were folded into `'User'`, losing information.
+ */
+export type TransactionType =
+  | 'RgbSend'
+  | 'Drain'
+  | 'CreateUtxos'
+  | 'SendBtc'
+  | 'Incoming'
+  | 'User';
 
 export interface BlockTime {
   height: number;
@@ -387,22 +388,6 @@ export type AssetUDA = {
   };
 };
 
-export type AssetIFA = {
-  assetId: string;
-  ticker: string;
-  name: string;
-  details?: string;
-  precision: number;
-  initialSupply: number;
-  maxSupply: number;
-  knownCirculatingSupply: number;
-  timestamp: number;
-  addedAt: number;
-  balance: Balance;
-  media?: Media;
-  rejectListUrl?: string;
-};
-
 export type AssetCFA = {
   assetId: string;
   name: string;
@@ -452,8 +437,12 @@ export interface LightningAsset {
 
 export interface CreateLightningInvoiceRequestModel {
   amountSats?: number;
-  asset: LightningAsset;
+  /** Omit for a BTC-only invoice. */
+  asset?: LightningAsset;
   expirySeconds?: number;
+  /** Pre-image hash for a HODL invoice. */
+  paymentHash?: string | null;
+  minFinalCltvExpiryDelta?: number | null;
 }
 
 export interface LightningReceiveRequest {
@@ -477,12 +466,8 @@ export interface PayLightningInvoiceRequestModel {
   lnInvoice: string;
   amount?: number;
   assetId?: string;
-  maxFee?: number;
-}
-
-export interface PayLightningInvoiceEndRequestModel {
-  signedPsbt: string;
-  lnInvoice: string;
+  /** RGB asset amount for an asset-denominated payment. */
+  assetAmount?: number;
 }
 
 export interface ListLightningPaymentsResponse {
@@ -492,18 +477,31 @@ export interface ListLightningPaymentsResponse {
 // ─── UTEXO Protocol — Onchain ─────────────────────────────────────────────────
 
 export interface OnchainReceiveRequestModel extends InvoiceRequest {
-  amount: number;
-  assetId: string;
+  /** Omit to receive any amount. */
+  amount?: number;
+  assetId?: string;
+  /** Witness (vs blinded) receive. Default `true`. */
+  witness?: boolean;
 }
 
+/** Full receive data — both platforms have all of this available. */
 export interface OnchainReceiveResponse {
   invoice: string;
+  recipientId?: string;
+  expirationTimestamp?: number | null;
+  batchTransferIdx?: number;
 }
 
+/** Mirrors {@link SendAssetBeginRequestModel} so one model serves both paths. */
 export interface OnchainSendRequestModel {
   invoice: string;
   assetId?: string;
   amount?: number;
+  witnessData?: WitnessData;
+  donation?: boolean;
+  feeRate?: number;
+  minConfirmations?: number;
+  skipSync?: boolean;
 }
 
 export interface OnchainSendEndRequestModel {
@@ -512,34 +510,3 @@ export interface OnchainSendEndRequestModel {
 }
 
 export interface OnchainSendResponse extends SendResult {}
-
-export interface GetOnchainSendResponse {
-  sendId: string;
-  txid?: string;
-  status: string;
-  amount: number;
-  assetId?: string;
-  fee?: number;
-  createdAt: number;
-  completedAt?: number;
-}
-
-// ─── UTEXO Protocol — Withdraw (Lightning → L1) ───────────────────────────────
-
-export interface WithdrawBeginRequestModel {
-  address_or_rgbinvoice: string;
-  amount_sats: number;
-  fee_rate?: number;
-  asset?: string;
-}
-
-export interface WithdrawEndRequestModel {
-  signed_psbt: string;
-}
-
-export interface WithdrawalStatus {
-  status: 'pending' | 'completed' | 'failed';
-  txid?: string;
-  withdrawalId?: string;
-  error?: string;
-}

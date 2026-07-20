@@ -99,6 +99,12 @@ export type { ConfigOptions } from './utexo/config/options';
 // HTTP transport (injectable; used by core clients such as the LSP client)
 export { FetchClient } from './utils/fetch-client';
 
+// RLN — Lightning domain types, canonical statuses, wire-mapping contract
+export * from './rln';
+
+// utexo-lsp — client, composed flows, types, errors
+export * from './lsp';
+
 // Crypto — VSS key derivation
 export { deriveVssSigningKeyFromMnemonic } from './crypto/vss-keys';
 

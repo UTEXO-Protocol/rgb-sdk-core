@@ -2,7 +2,6 @@ import type {
   CreateLightningInvoiceRequestModel,
   LightningReceiveRequest,
   LightningSendRequest,
-  GetLightningSendFeeEstimateRequestModel,
   PayLightningInvoiceRequestModel,
   OnchainReceiveRequestModel,
   OnchainReceiveResponse,
@@ -11,32 +10,22 @@ import type {
   ListLightningPaymentsResponse,
   SendAssetEndRequestModel,
   Transfer,
-  TransferStatus,
 } from '../types/wallet-model';
 
 /**
  * Lightning Protocol Interface
+ *
+ * Note: LN status polling is intentionally absent here. The former
+ * `getLightningReceiveRequest`/`getLightningSendRequest` returned
+ * `TransferStatus`, an RGB on-chain vocabulary that folds LN states lossily
+ * (and differently on each platform). They are replaced by
+ * `getLightningReceiveStatus`/`getLightningSendStatus`, which return the
+ * canonical LN status vocabulary — added with the Lightning surface.
  */
 export interface ILightningProtocol {
   createLightningInvoice(
     params: CreateLightningInvoiceRequestModel
   ): Promise<LightningReceiveRequest>;
-
-  getLightningReceiveRequest(id: string): Promise<TransferStatus | null>;
-
-  getLightningSendRequest(id: string): Promise<TransferStatus | null>;
-
-  getLightningSendFeeEstimate(
-    params: GetLightningSendFeeEstimateRequestModel
-  ): Promise<number>;
-
-  payLightningInvoiceBegin(
-    params: PayLightningInvoiceRequestModel
-  ): Promise<string>;
-
-  payLightningInvoiceEnd(
-    params: SendAssetEndRequestModel
-  ): Promise<LightningSendRequest>;
 
   payLightningInvoice(
     params: PayLightningInvoiceRequestModel,
