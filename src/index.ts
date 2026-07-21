@@ -55,50 +55,33 @@ export {
 } from './utils/bip32-helpers';
 
 // Interfaces
-export type {
-  WalletInitParams,
-  IWalletManager,
-} from './interfaces/IWalletManager';
 export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
+
+// The wallet contract — domain groups + optional carriers (MIGRATION-PLAN-v3.md).
+// The v2 `IUTEXOWallet`, `IWalletManager`, `WalletInitParams` and
+// `BaseWalletManager` were deleted in step 5.
 export type {
+  ILightningNode,
+  ILightningPayments,
+  CreateLnInvoiceRequest,
+  ILightningAddress,
+  IOnchainTransfers,
+  IRgbAssets,
+  InflateResult,
+  IBitcoinWallet,
+  IWalletLifecycle,
+  IPsbtSigning,
+  IBeginEndFlows,
+  IVssBackup,
+  WalletCapabilities,
+  IUTEXOWalletCore,
   IUTEXOWallet,
   UTEXOWalletCreateParams,
-} from './interfaces/IUTEXOWallet';
-export type {
-  ILightningProtocol,
-  IOnchainProtocol,
-  IUTEXOProtocol,
-} from './interfaces/IUTEXOProtocol';
+} from './interfaces/wallet';
 
-// BaseWalletManager abstract class
-export { BaseWalletManager } from './wallet/BaseWalletManager';
-
-// UTEXO Protocol base classes
-export {
-  LightningProtocol,
-  OnchainProtocol,
-  UTEXOProtocol,
-} from './utexo/utexo-protocol';
-
-// UTEXO network config
-export {
-  getUtxoNetworkConfig,
-  utexoNetworkMap,
-  utexoNetworkIdMap,
-  getDestinationAsset,
-} from './utexo/utils/network';
-export type {
-  UtxoNetworkPreset,
-  UtxoNetworkMap,
-  UtxoNetworkIdMap,
-  UtxoNetworkPresetConfig,
-  NetworkAsset,
-  UtxoNetworkId,
-} from './utexo/utils/network';
-export { testnetPreset, mainnetPreset } from './utexo/config/utexo-presets';
+// VSS defaults
 export { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './utexo/config/vss';
-export type { ConfigOptions } from './utexo/config/options';
 
 // HTTP transport (injectable; used by core clients such as the LSP client)
 export { FetchClient } from './utils/fetch-client';
@@ -121,6 +104,7 @@ export { detectPsbtType, deriveDescriptors } from './crypto/psbt';
 
 // UTEXO restore helpers (pure, no fs)
 export { buildVssConfigFromMnemonic, getBackupStoreId } from './utexo/restore';
+export type { UtxoNetworkPreset } from './utexo/restore';
 
 // Crypto — key derivation (pure @scure/*, works in Node, RN, and Web)
 export {
@@ -143,4 +127,5 @@ export {
   deriveKeysFromXpriv,
   accountDerivationPath,
   normalizeSeedInput,
+  seedFromMnemonic,
 } from './crypto/keys';

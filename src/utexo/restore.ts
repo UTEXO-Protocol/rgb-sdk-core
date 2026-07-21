@@ -9,8 +9,17 @@
 
 import { deriveKeysFromMnemonic } from '../crypto/keys';
 import { deriveVssSigningKeyFromMnemonic } from '../crypto/vss-keys';
-import type { UtxoNetworkPreset } from './utils/network';
 import type { VssBackupConfig } from '../types/wallet-model';
+
+/**
+ * Which key-derivation bundle to use.
+ *
+ * Inlined here in step 6c: it was the only surviving member of
+ * `utexo/utils/network.ts`, a 119-line UTEXO network-config table that both
+ * SDKs re-exported and neither used. Endpoint resolution actually happens
+ * through `DEFAULT_RLN_URLS` (web) and `network-defaults.ts` (rn).
+ */
+export type UtxoNetworkPreset = 'mainnet' | 'testnet';
 
 /** Store id for backup/restore (same convention as VSS: wallet_<masterFingerprint>). */
 export function getBackupStoreId(masterFingerprint: string): string {

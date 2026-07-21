@@ -43,8 +43,12 @@ import {
  * or tree-shaken build). This list is what catches that.
  */
 export const IUTEXO_WALLET_METHODS = [
-  // lifecycle / wallet
-  'goOnline',
+  // lifecycle
+  'init',
+  'unlock',
+  'dispose',
+  'isDisposed',
+  // wallet
   'syncWallet',
   'refreshWallet',
   'getNetwork',
@@ -56,29 +60,23 @@ export const IUTEXO_WALLET_METHODS = [
   'listTransfers',
   'listTransactions',
   'createUtxos',
-  'createUtxosBegin',
-  'createUtxosEnd',
   'failTransfers',
   'createBackup',
+  'vssClearFence',
+  'signMessage',
+  'verifyMessage',
   // assets
   'issueAssetNia',
   'issueAssetIfa',
   'inflate',
-  'inflateBegin',
-  'inflateEnd',
   // invoices / on-chain
   'blindReceive',
   'witnessReceive',
   'decodeRGBInvoice',
   'onchainReceive',
   'onchainSend',
-  'onchainSendBegin',
-  'onchainSendEnd',
   'listOnchainTransfers',
   'sendBtc',
-  'sendBtcBegin',
-  'sendBtcEnd',
-  'estimateFee',
   'estimateFeeRate',
   // lightning — node
   'getNodeInfo',
@@ -94,6 +92,7 @@ export const IUTEXO_WALLET_METHODS = [
   'createLightningInvoice',
   'payLightningInvoice',
   'listLightningPayments',
+  'listPayments',
   'decodeLnInvoice',
   'invoiceStatus',
   'getLightningReceiveStatus',
@@ -104,16 +103,19 @@ export const IUTEXO_WALLET_METHODS = [
   // apay
   'apayNew',
   'apayNewWithAddress',
-  // vss
-  'configureVssBackup',
-  'disableVssAutoBackup',
-  'vssBackup',
-  'vssBackupInfo',
-  'vssClearFence',
 ] as const;
 
-/** Methods that must NOT be present — removed in the status separation. */
+/**
+ * Methods that must NOT be present on **either** platform.
+ *
+ * Deliberately excludes surface a platform legitimately keeps as an extra:
+ * web still exposes flat `signPsbt`/`vssBackup`/`goOnline`/`getXpub` because it
+ * genuinely performs them, while rn deleted them. Asserting their absence
+ * globally would be wrong. What the carriers guarantee is checked by the
+ * capability block instead.
+ */
 export const REMOVED_METHODS = [
+  // status separation
   'getLightningReceiveRequest',
   'getLightningSendRequest',
   'getOnchainSendStatus',
@@ -125,6 +127,52 @@ export const REMOVED_METHODS = [
   'getNodeInfoRaw',
   'decodeLnInvoiceRaw',
   'invoiceStatusRaw',
+  // the plain RGB send trio — stubs on rn, renamed to onchainSend* on web
+  'send',
+  'sendBegin',
+  'sendEnd',
+] as const;
+
+// ── Optional capability groups ───────────────────────────────────────────────
+
+/**
+ * The carriers, as data.
+ *
+ * This is the table behind the check that types cannot perform: an interface
+ * says `psbt?: IPsbtSigning`, but nothing in the type system verifies that
+ * `capabilities.psbtSigning` agrees with whether `psbt` is actually there, or
+ * that a *present* carrier does anything but throw.
+ */
+export const CARRIER_GROUPS = [
+  {
+    property: 'psbt',
+    flag: 'psbtSigning',
+    methods: ['signPsbt', 'estimateFee'],
+  },
+  {
+    property: 'beginEnd',
+    flag: 'beginEndFlows',
+    methods: [
+      'createUtxosBegin',
+      'createUtxosEnd',
+      'onchainSendBegin',
+      'onchainSendEnd',
+      'sendBtcBegin',
+      'sendBtcEnd',
+      'inflateBegin',
+      'inflateEnd',
+    ],
+  },
+  {
+    property: 'vss',
+    flag: 'vssBackup',
+    methods: [
+      'configureVssBackup',
+      'disableVssAutoBackup',
+      'vssBackup',
+      'vssBackupInfo',
+    ],
+  },
 ] as const;
 
 // ── Canonical runtime vocabularies ───────────────────────────────────────────
@@ -173,6 +221,16 @@ export interface ConformanceOptions {
   createWallet?: () => Promise<Record<string, unknown>>;
   /** The class itself — lets method presence be checked without constructing. */
   walletClass?: { prototype: object };
+  /**
+   * Builds an **un-initialised** wallet, synchronously.
+   *
+   * Carriers and `capabilities` are instance state, not prototype members, so
+   * the capability checks need an object — but not a working one. Construction
+   * on both platforms only stores params (no wasm, no node, no network), so
+   * this is cheap and safe to run in unit tests. Without it the capability
+   * block is skipped, which would leave §7's central guarantee unverified.
+   */
+  createWalletSync?: () => Record<string, unknown>;
   describe?: DescribeFn;
   it?: ItFn;
   expect?: ExpectFn;
@@ -214,6 +272,69 @@ export function runConformanceChecks(opts: ConformanceOptions): void {
         });
       }
     });
+
+    // ── Capability honesty ───────────────────────────────────────────────────
+    //
+    // The check the type system cannot make. `psbt?: IPsbtSigning` tells the
+    // compiler the property may be absent; it says nothing about whether the
+    // `capabilities` flag agrees, nor whether a carrier that *is* present does
+    // more than throw. Both are exactly how the old contract went wrong — it
+    // declared 67 methods and threw on 18 of them.
+    if (opts.createWalletSync) {
+      const build = opts.createWalletSync;
+
+      describe('capabilities', () => {
+        it('exposes a capabilities object', () => {
+          expect(typeof build().capabilities).toBe('object');
+        });
+
+        for (const group of CARRIER_GROUPS) {
+          it(`capabilities.${group.flag} is a boolean`, () => {
+            const caps = build().capabilities as Record<string, unknown>;
+            expect(typeof caps[group.flag]).toBe('boolean');
+          });
+
+          // The core invariant: the flag and the carrier cannot disagree.
+          it(`capabilities.${group.flag} matches presence of .${group.property}`, () => {
+            const wallet = build();
+            const caps = wallet.capabilities as Record<string, unknown>;
+            expect(caps[group.flag]).toBe(wallet[group.property] !== undefined);
+          });
+
+          it(`.${group.property} is either absent or complete`, () => {
+            const carrier = build()[group.property] as
+              | Record<string, unknown>
+              | undefined;
+            if (carrier === undefined) return; // absent is a valid answer
+            for (const method of group.methods) {
+              expect(typeof carrier[method]).toBe('function');
+            }
+          });
+
+          // A present carrier must actually do something. Calling with no
+          // arguments will usually fail — that is fine and expected — but it
+          // must not fail with "not implemented", which is the stub pattern
+          // this whole migration removed.
+          it(`.${group.property}, when present, contains no stubs`, async () => {
+            const wallet = build();
+            const carrier = wallet[group.property] as
+              | Record<string, unknown>
+              | undefined;
+            if (carrier === undefined) return;
+            for (const method of group.methods) {
+              const fn = carrier[method] as (...a: unknown[]) => unknown;
+              let message = '';
+              try {
+                await fn.call(carrier);
+              } catch (e) {
+                message = e instanceof Error ? e.message : String(e);
+              }
+              expect(/not implemented/i.test(message)).toBe(false);
+            }
+          });
+        }
+      });
+    }
 
     describe('canonical status vocabularies', () => {
       // The normalizers are the single mechanism keeping both SDKs on one
@@ -324,3 +445,14 @@ export function runConformanceChecks(opts: ConformanceOptions): void {
 /** A syntactically valid but unknown BOLT11 — used only as a probe. */
 const CONFORMANCE_PROBE_INVOICE =
   'lnbc1p000000000000000000000000000000000000000000000000000000000000000000';
+
+// ── Field verification helpers (§7a.2) ───────────────────────────────────────
+export {
+  report,
+  expectFields,
+  expectEach,
+  expectNoWireKeys,
+  HEX_32,
+  HEX_PUBKEY,
+} from './field-checks';
+export type { FieldSpec, FieldsSpec, FieldType } from './field-checks';
