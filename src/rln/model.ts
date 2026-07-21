@@ -134,7 +134,9 @@ export interface LightningPayment {
   /** Known once settled (sends) or claimable (HODL receives). */
   preimage?: string;
   payeePubkey?: string;
+  /** Unix timestamp in **seconds** (UTC). Multiply by 1000 for `new Date()`. */
   createdAt?: number;
+  /** Unix timestamp in **seconds** (UTC). Multiply by 1000 for `new Date()`. */
   updatedAt?: number;
 }
 

@@ -211,7 +211,8 @@ export type TransferKind =
   | 'ReceiveBlind'
   | 'ReceiveWitness'
   | 'Send'
-  | 'Inflation';
+  | 'Inflation'
+  | 'Burn';
 
 export type Outpoint = {
   txid: string;
@@ -233,7 +234,9 @@ export type Assignment = {
 export interface Transfer {
   idx: number;
   batchTransferIdx: number;
+  /** Unix timestamp in **seconds** (UTC). Multiply by 1000 for `new Date()`. */
   createdAt: number;
+  /** Unix timestamp in **seconds** (UTC). Multiply by 1000 for `new Date()`. */
   updatedAt: number;
   status: TransferStatus;
   requestedAssignment?: Assignment;
@@ -243,6 +246,10 @@ export interface Transfer {
   recipientId?: string;
   receiveUtxo?: Outpoint;
   changeUtxo?: Outpoint;
+  /**
+   * Absolute expiry as a Unix timestamp in **seconds** (UTC) — not a duration.
+   * Undefined means no expiry.
+   */
   expiration?: number;
   transportEndpoints: {
     endpoint: string;
@@ -253,11 +260,17 @@ export interface Transfer {
   consignmentPath?: string;
 }
 
+/**
+ * Mirrors rgb-lib `TransferStatus` (src/database/enums.rs).
+ * `Settled` and `Failed` are the only final states.
+ */
 export type TransferStatus =
   | 'WaitingCounterparty'
+  | 'WaitingSafeHeight'
   | 'WaitingConfirmations'
   | 'Settled'
-  | 'Failed';
+  | 'Failed'
+  | 'Initiated';
 
 // ─── UTXOs & Balances ─────────────────────────────────────────────────────────
 
