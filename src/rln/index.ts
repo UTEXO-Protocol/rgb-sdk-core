@@ -22,6 +22,8 @@ export {
   isClaimablePaymentStatus,
 } from './status';
 
+export { normalizeRlnNetwork, tryNormalizeRlnNetwork } from './network';
+
 export type {
   LightningChannel,
   OpenChannelParams,

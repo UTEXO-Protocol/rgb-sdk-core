@@ -12,35 +12,31 @@
 
 | | `tsc` | tests |
 |---|---|---|
-| rgb-sdk-core | ✅ | 188 (10 suites) |
+| rgb-sdk-core | ✅ | 195 (11 suites) |
 | rgb-sdk-web | ✅ | 248 (5 suites) |
 | rgb-sdk-rn | ✅ | 84 contract-conformance checks (`npm run check:contract`) |
 
 Plus: RLN version lock green (`0.9.0-beta.3` across web wasm, rn iOS, rn Android);
-`rlnInflate` compiles on both Android and iOS.
+**both e2e suites green** — web 6 specs (`rgb-sdk-web/tests/e2e/`), rn 5
+scenarios (`rgb-sdk-rn-demo/e2e/`).
 
-**Done:** steps 0 · 1 · 1b · 2 · 3 · 4a · 4b · 5 · 6 · 6c · 6b.0 — see §6.0–§6.0j.
+**Done:** steps 0 · 1 · 1b · 2 · 3 · 4a · 4b · 5 · 6 · 6c · 6b.0 · 6b.1 · 6b.2
+· 6b.3 · 6b.4 — see §6.0–§6.0o. **6b is complete; step 7 is unblocked.**
 
-**Next up — 6b.1: machine-readable fixtures.** The demo scripts
-(`rgb-sdk-web-demo/scripts/start-lsp-web.sh`,
-`rgb-sdk-rn-demo/scripts/start-lsp-regtest.sh`) provision a complete regtest
-stack and currently log results for humans. They need to emit a stable fixture
-file so e2e reads values instead of scraping logs:
+Each e2e suite has its own README with the exact commands. Both need a
+provisioned stack, and **the two stacks cannot run at once** (both claim :3000,
+:18443, :50001):
 
-```
-ASSET_ID, LSP_PUBKEY, FAUCET_PUBKEY,
-GATEWAY_URL (:3001), LSP_URL (:3105), FAUCET_URL (:3108),
-UTEXO_LSP_URL (:8080), INDEXER_URL (:3002), VSS_URL (:8081, VSS=1 only)
-```
+- web — `rgb-sdk-web-demo/scripts/start-lsp-web.sh` (add `VSS=1`; needed by
+  the F-vss and G specs), then `cd rgb-sdk-web && npm run test:e2e`
+- rn — `rgb-sdk-rn-demo/scripts/start-lsp-regtest.sh` (starts the regtest
+  docker services itself; `VSS=1` adds vss-server on **:8181**, since Metro
+  owns :8081), an emulator with the demo installed, then `yarn test:e2e`
 
-Design constraint agreed before stopping: **additive only**. The web script
-already writes `.env.local`, which the demo consumes — a new fixture output must
-not disturb it. Read the existing writer block first
-(`grep -n 'ENV_LOCAL' start-lsp-web.sh`) and decide whether to extend that file
-or emit a separate `e2e-fixtures.json` beside it.
-
-**Then:** 6b.2 (web e2e, Playwright) and 6b.3 (rn e2e, emulator) can proceed in
-parallel → 6b.4 (VSS round-trip) → step 7 (VSS reshape) → step 8 (v4 `IRlnNode`).
+**Next up — step 7 (VSS reshape).** §6.0o proved the round-trip and left two
+contract-shape findings for the reshape to settle: `vssBackup()` races the
+automatic backup it cannot be awaited on, and `disableVssAutoBackup()` disables
+explicit backup as a side effect. Then step 8 (v4 `IRlnNode`).
 
 ### Cold-start orientation
 
@@ -59,6 +55,9 @@ runs one**), then §3 (target shape). Everything else is detail.
 | web wallet | `rgb-sdk-web/src/utexo/utexo-wallet.ts` + `wallet/rln-wallet-manager.ts` |
 | rn wallet | `rgb-sdk-rn/src/wallet/utexo-wallet.ts` |
 | rn conformance runner | `rgb-sdk-rn/scripts/check-contract.mjs` (+ `rn-stub-loader.mjs`) |
+| web e2e suite | `rgb-sdk-web/tests/e2e/` — harness + specs A–C, F, G (`npm run test:e2e`) |
+| rn e2e suite | `rgb-sdk-rn-demo/e2e/` + `app/e2e.tsx` + `scripts/run-e2e-android.mjs` (`yarn test:e2e`) |
+| e2e stack fixture | `rgb-sdk-{web,rn}-demo/e2e-fixtures.json`, written by the demo start scripts |
 
 **Verify everything is still green:**
 
@@ -94,9 +93,6 @@ saved by checking `rgb-sdk-rn-demo`.
   resolve `dist/`, not `src/`.
 - **rn uses yarn**; a stray `npm install` earlier rewrote `yarn.lock` and was
   reverted. The symlink survives; prefer yarn there.
-- **`rgb-sdk-core/src/utexo/config/Untitled`** — a 16-byte untracked file
-  containing the text `utexo-presets.ts`, created during the session and not by
-  the migration. Left in place deliberately; delete if it was an editor slip.
 - E2E will be a **local** gate first: the demo scripts hard-code
   `RGBLN_REPO=/Users/…/utexo/rgb-lightning-node`, which will not exist in CI
   (§7a.6).
@@ -746,10 +742,10 @@ defect as the stubs, one layer down.
 | 5 | ✅ **DONE** — `IWalletManager`, `WalletInitParams`, `BaseWalletManager`, `IUTEXOWalletLegacy` deleted (§6.0e) | 6 | — |
 | 6 | ✅ **DONE** — capability honesty enforced at runtime on both platforms (§6.0f) | — | — |
 | 6b.0 | ✅ **DONE** — field helpers in core, 26 tests (§6.0j) | 6b.2, 6b.3 | — |
-| 6b.1 | **Fixtures** — machine-readable output from the demo scripts (§7a.5) | 6b.2, 6b.3 | low |
-| 6b.2 | **web e2e** — Playwright; wasm needs a real browser (§7a.4). Scenarios A–C, F | 6b.4 | medium |
-| 6b.3 | **rn e2e** — emulator; includes **scenario D, the only proof `rlnInflate` runs** | — | medium-high |
-| 6b.4 | **Scenario G** — VSS round-trip with `VSS=1` | **7** | medium |
+| 6b.1 | ✅ **DONE** — `e2e-fixtures.json` emitted by both demo scripts (§6.0k) | 6b.2, 6b.3 | — |
+| 6b.2 | ✅ **DONE** — Playwright suite in `rgb-sdk-web/tests/e2e/`, scenarios A–C + F, all green (§6.0l) | 6b.4 | — |
+| 6b.3 | ✅ **DONE** — flow-runner suite in `rgb-sdk-rn-demo/e2e/`, scenarios A–E, 5/5 green on the emulator; **scenario D proves `rlnInflate` runs**, and the suite found 3 real defects (§6.0m) | — | — |
+| 6b.4 | ✅ **DONE** — scenario G green: backup → mutate → restore into a fresh wallet, state equality asserted (§6.0o). **Step 7 is unblocked** | **7** | — |
 | 6c | ✅ **DONE** — protocol layer + UTEXO config table deleted, 8 files (§6.0h) | — | — |
 | 7 | *(follow-up)* Reshape VSS to intent-based; drop `vssBackup` flag (§2.7) | — | medium — **needs §7a scenario G** |
 | 8 | *(v4)* `IRlnNode` replaces `IRgbLibBinding` | — | high — separate plan |
@@ -1287,6 +1283,337 @@ the walker.
 
 ---
 
+### 6.0k Step 6b.1 results — e2e fixtures (DONE)
+
+Both provisioning scripts now emit **`e2e-fixtures.json`** into their demo-app
+root, next to `.env.local`:
+
+- `rgb-sdk-web-demo/scripts/start-lsp-web.sh` → `rgb-sdk-web-demo/e2e-fixtures.json`
+- `rgb-sdk-rn-demo/scripts/start-lsp-regtest.sh` → `rgb-sdk-rn-demo/e2e-fixtures.json`
+
+**Separate JSON file, not more env vars — decided.** The env writers filter
+stale entries by key prefix on every run, and the web script's own comments
+document two bugs that filtering already caused (BSD-grep alternation, oldest-
+duplicate-wins). Adding e2e keys would grow that surface; a JSON file is
+`JSON.parse`-able by Playwright and the rn flow runner directly, and leaves both
+`.env.local` writers byte-for-byte untouched (the additive constraint).
+
+**Shared shape** (`platform` distinguishes the tracks):
+
+| Key | web | rn |
+|---|---|---|
+| `generatedAt`, `platform`, `ASSET_ID`, `LSP_PUBKEY`, `FAUCET_PUBKEY` | ✓ | ✓ |
+| `LSP_URL` / `FAUCET_URL` / `UTEXO_LSP_URL` | :3105 / :3108 / :8080 | :3005 / :3008 / :8080 |
+| `LSP_PEER_PORT` / `FAUCET_PEER_PORT` (numbers) | 9745 / 9748 | 9737 / 9740 |
+| `INDEXER_URL` | `http://127.0.0.1:3002` (esplora) | `127.0.0.1:50001` (electrs, no scheme — matches what `/unlock` takes) |
+| `GATEWAY_URL`, `GATEWAY_WS_URL`, `TRANSPORT_URL` | ✓ | — (no gateway; node is in-process) |
+| `VSS_URL` | only under `VSS=1` — **absent, not empty, otherwise** | — |
+| `BRIDGE_URL` (:5000), `PROXY_ENDPOINT` (`rpc://…:3000/json-rpc`) | — | ✓ |
+
+Implementation notes:
+
+- **`FAUCET_PUBKEY` was not previously captured** by either script — both now
+  fetch it from `/nodeinfo` after unlock (needed by scenario E, pay-from-Faucet).
+- JSON is emitted via `jq -n --arg` (both scripts already hard-require jq), so
+  values are escaped correctly by construction; the web block was dry-run with
+  and without `VSS=1`.
+- `stop` mode **deletes the fixture** in both scripts — a fixture describing a
+  torn-down stack would point e2e at dead endpoints and produce confusing
+  connection failures instead of a clear "run the script first".
+- rn URLs stay `127.0.0.1` on purpose: the script's `adb reverse` forwards make
+  them valid from inside the emulator unchanged.
+
+~~Not run end-to-end: emitting the file requires bringing up the full docker +
+cargo stack.~~ **Verified during 6b.2**: both a plain and a `VSS=1` provisioning
+run produced the exact designed shape (`VSS_URL` present only in the latter).
+
+---
+
+### 6.0l Step 6b.2 results — web e2e (DONE)
+
+`rgb-sdk-web/tests/e2e/` — Playwright + a minimal Vite harness page, run with
+`npm run test:e2e` (`npm test` stays docker-free; jest ignores the directory).
+**5 specs, all green in a single 37 s run** against the provisioned stack:
+A (lifecycle + live conformance), B (on-chain/UTXO), C (RGB assets),
+F (psbt/beginEnd carriers), F-vss (real backup, `VSS=1`).
+
+#### Shape
+
+- The harness aliases `@utexo/rgb-sdk-web` → **`dist/index.mjs`** — the suite
+  tests the built artifact, not `src/`. Specs drive it through three generic
+  page entry points (`boot` / `call` / `get` / `conformance`); every result
+  crosses the page boundary as JSON in an `{ ok, value | error }` envelope, so
+  page-side failures arrive with their message.
+- Dot-path calls (`'psbt.signPsbt'`, `'beginEnd.createUtxosEnd'`) reach the
+  carriers with no per-method glue.
+- Port **5173 is load-bearing**: the gateway's CORS allowlist contains only
+  that origin. `reuseExistingServer: false`, so a demo dev server on the port
+  is an explicit error, not a silently wrong page.
+- Funding/mining goes through the gateway's `POST /dev/regtest/fund` **from
+  Node** — no docker exec, no CORS (§7a.1 held up).
+- The §6.0f gap is closed: `runConformanceChecks` runs **in the page** with a
+  collector `describe/it/expect` and `createWallet: () => liveWallet`, so
+  `invoiceStatus` / `listChannels` / `listPayments` / `estimateFeeRate` are
+  checked against live data. `createWalletSync` deliberately still gets a
+  fresh un-initialised instance — the no-stub probes call carrier methods with
+  no args, and on a live wallet `createUtxosBegin()` (all-optional params)
+  would do real work.
+
+#### The suite caught a real bug on its first run — §7a.2's exact prediction
+
+**web `decodeRGBInvoice` returned the raw wire object** (`recipient_id`,
+`asset_id`, `network: "Regtest"`) cast to `InvoiceData` — both branches ended
+in `return raw as unknown as InvoiceData`. Type-level checks, §6.0f, and 248
+unit tests all passed over it; the first live field assertion failed on it.
+Fixed with `normalizeInvoiceData()` in `RlnWasmBinding.ts` (snake→camel,
+network normalized to canonical lowercase, `assignment` through
+`parseAssignment`, invoice string echoed from the request since the wire
+payload does not include it).
+
+#### Other findings
+
+- **`estimateFeeRate` cannot estimate on fresh regtest** (no fee history), and
+  the core conformance check treated any throw as failure. Relaxed in
+  `core/src/conformance/index.ts` to the same contract as the invoiceStatus
+  probe: a throw is acceptable, a malformed *result* is not. Core: 188 tests
+  still green.
+- **A single `syncWallet` after mining is a race** — esplora indexes the block
+  asynchronously, so a PSBT built right after can select already-spent inputs
+  (`bad-txns-inputs-missingorspent`). The helper `waitForColorable()`
+  sync-polls until the wallet actually sees the expected colorable unspents;
+  used by every on-chain scenario.
+- **The wasm HTTP client needs an absolute VSS URL** — the vite-proxied
+  `/vss` must be resolved against `location.origin` before it reaches the
+  wallet (`HTTP error: builder error` otherwise). The demo's `resolveVssUrl`
+  already knew this; the harness now does the same.
+- `AssetBalance.future` is the projected **total**, not a pending delta — a
+  fresh issuance reports `settled = future = spendable = issuedSupply`. (A
+  first spec draft assumed `settled + future = supply` and was wrong.)
+
+#### Environment notes
+
+- The web stack and the rn regtest stack **cannot run simultaneously** — both
+  claim :3000 (rgb proxy), :18443, :50001; an unrelated `cors-anywhere`
+  container also sat on the gateway's :3001. Resolved with `docker stop`
+  (state preserved) of `rgb-lightning-node-{proxy,electrs,bitcoind}-1` +
+  `cors-anywhere`; `docker start` brings them back.
+- New rgb-sdk-web devDeps: `@playwright/test`, `vite` + wasm/top-level-await/
+  node-polyfills plugins (same major versions as the demo). Chromium installed
+  via `npx playwright install chromium`.
+
+---
+
+### 6.0m Step 6b.3 results — rn e2e (DONE)
+
+`rgb-sdk-rn-demo/e2e/` — scenarios A–E, **5/5 green in a 42 s run** against the
+regtest stack on an Android emulator (`yarn test:e2e`, README in that
+directory). The suite found **three real defects on its first run**, all fixed
+below.
+
+#### Shape
+
+The §7a.5-recommended option: a **flow-runner screen** (`app/e2e.tsx`, outside
+the tabs, reached by deep link) executes the scenarios in-app, and a host
+script (`scripts/run-e2e-android.mjs`) turns the result into an exit code.
+One wallet is shared across A–E — booting an RLN node and funding it is most of
+the wall clock, and the later scenarios need what the earlier ones produce.
+Assertions come from `@utexo/rgb-sdk-core/conformance`, so both tracks agree on
+what a valid response is. Scenario A also runs `runConformanceChecks` against
+the **live** rn wallet with the web harness's collector-runner pattern, closing
+the §6.0f gap on this platform too.
+
+#### Two design decisions from §6.0m recon did not survive contact
+
+- **Markers travel over HTTP, not `adb logcat`.** Under the New Architecture
+  (bridgeless, RN 0.81) `console.log` goes to the Metro dev server; only RN's
+  own startup line reaches the `ReactNativeJS` tag. Verified empirically: a
+  full run produced exactly one logcat line. The runner now serves a one-route
+  sink on `:8099` which the app POSTs to at `10.0.2.2:8099` — which also
+  removes logcat's ~4 kB per-line truncation and behaves the same in dev and
+  release builds.
+- **Fixtures travel in the deep link, not `EXPO_PUBLIC_*`.** Env vars are
+  inlined into the bundle at build time, so a re-provisioned stack would need
+  an app rebuild before the suite could see the new asset id and pubkeys. The
+  host runner reads `e2e-fixtures.json` and passes it as a URI-encoded
+  parameter; §6.0k's planned `FAUCET_PUBKEY` env addition is therefore not
+  needed, and both `.env.local` writers stay untouched.
+
+The rest of the recon held: the wallet lifecycle copied from
+`runRLNUtexoPaymentFlow.ts`, the bridge for mine/send, `buildRegtestConfig()`,
+and scenario E as a direct channel to the Faucet (`10.0.2.2:9740`) with
+`pushMsat` so the Faucet can pay back over its REST API. URLs are rewritten to
+`10.0.2.2` in-app rather than `adb reverse`d, which is what makes the peer
+ports work unchanged.
+
+#### The three defects — all the same class, all fixed
+
+| # | Defect | Fix |
+|---|---|---|
+| 1 | `getNetworkInfo().network` returned the wire value `'Regtest'`, not the domain `'regtest'` | normalize in `toLightningNetworkInfo` |
+| 2 | `decodeRGBInvoice().network` — same, and reached through a `r.network as BitcoinNetwork` cast over a value that never matched the type. `decodeLnInvoice().network` had it too (scenario E showed it; nothing asserted it yet) | normalize in `mapInvoiceData` + `toDecodedLnInvoice` |
+| 3 | `issueAssetIfa` returned `Promise<any>` straight from the binding, while `listAssets().ifa` mapped the same asset through `mapAssetIfa` — one asset, two shapes | return `Promise<AssetIfa>` via the existing mapper |
+
+Defects 1 and 2 are the §6.0l bug again: a cast where a normalizer belonged,
+invisible to the compiler because both sides are `string`. The fix is a new
+core helper — **`normalizeRlnNetwork` / `tryNormalizeRlnNetwork`**
+(`src/rln/network.ts`, 7 tests), deliberately separate from
+`normalizeNetwork` in `utils/validation`:
+
+> `normalizeNetwork` validates **caller input**, where a mis-cased `'Mainnet'`
+> is a config typo that must fail loudly (a test pins that). `normalizeRlnNetwork`
+> normalizes **binding output**, where casing is just the binding's spelling
+> convention — and it folds `SignetCustom → utexo`, `Bitcoin → mainnet`.
+
+**web got the same normalization** (`RlnWasmBinding.normalizeInvoiceData`,
+`RlnNodeBinding.normalizeNetworkInfo`). web was not visibly broken — its wasm
+runtime happens to emit lowercase — but it was relying on that, and scenario A
+asserts the value. Verified by `tsc` + 248 unit tests only; the web e2e could
+not re-run because the rn stack holds the shared ports.
+
+#### Scenario D — step 1b is finally proven
+
+`issueAssetIfa` → `inflate` → mine → balance. `inflate` returned a real 64-hex
+txid, settled balance went **500 → 750 (exactly the inflation amount)**, and
+`listTransfers` reported `["Issuance", "Inflation"]`. §6.0c wired `rlnInflate`
+and §6.0g proved it *compiles* on Android and iOS; this is the first time it
+has *run*. The scenario also asserts `inflate` invents no `batchTransferIdx`
+(the uniffi response carries none) and cross-checks the issued asset against
+its `listAssets().ifa` entry — that cross-check is what pins defect 3.
+
+#### One failure was the suite's own fault, not the SDK's
+
+The first run asserted `issuedSupply` on the IFA response. IFA has no such
+field — it models supply as `initialSupply` / `maxSupply` /
+`knownCirculatingSupply` — so the assertion was wrong even though it pointed at
+a real missing mapper. Worth stating plainly: **a red scenario is a hypothesis
+about the SDK, not a verdict on it**, the same lesson §6.0e recorded for dead-code
+lists.
+
+#### Environment notes
+
+- `start-lsp-regtest.sh` now **starts the regtest docker services itself** when
+  they are down, instead of demanding `./regtest.sh start` first. It only does
+  so when docker positively reports them down — `regtest.sh start` begins with
+  `down -v`, so a false negative would throw away the chain and every wallet on
+  it; an unreachable docker is an error, not a "probably not running".
+- **`VSS=1` on the rn stack publishes vss-server on :8181, not :8081** —
+  Metro owns :8081 here, so the container cannot bind and `regtest.sh`'s own
+  VSS path fails with `address already in use`. Done with a compose overlay
+  (`scripts/compose.vss-rn.yaml`, `ports: !override`) so the shared
+  `rgb-lightning-node/compose.yaml` is untouched and web keeps :8081. `VSS_URL`
+  lands in `e2e-fixtures.json` only when `VSS=1`, matching §6.0k.
+- **The demo app does not typecheck** — 10 pre-existing errors, all
+  `Property 'send' does not exist on type 'UTEXOWallet'` in
+  `flows/**` and `app/(tabs)/utexo.tsx`. §2.3/§6.0 deleted the `send` trio and
+  the demo was never migrated to `onchainSend`. Metro strips types so the app
+  runs, and the e2e screen imports none of those files — but those flows will
+  throw if a human taps them. Not fixed here: out of 6b.3's scope, and worth
+  its own pass.
+- iOS is not covered. The flow runner is platform-agnostic, but the host runner
+  is `adb`-shaped; an iOS runner would need `xcrun simctl` and a different
+  launch path.
+
+#### Original recon (kept — still accurate for the parts that held)
+
+What the implementation was built from, kept because it is where the pieces
+live rather than a record of what was planned:
+
+**Wallet lifecycle on rn** (copied from
+`flows/payments/runRLNUtexoPaymentFlow.ts:44`):
+
+```ts
+const w = new UTEXOWallet(
+  { storageDirPath,            // expo-file-system documentDirectory + suffix, strip 'file://'
+    daemonListeningPort, ldkPeerListeningPort,
+    network: 'regtest', enableVirtualChannelsV0: false },
+  new PasswordRLNSigner(password, mnemonic)
+);
+await w.init();
+await w.unlock(buildRegtestConfig().unlockParams);  // utils/env.ts
+```
+
+Fresh `storageDirPath` per run (timestamp suffix) is the demo's own trick —
+same reason as web's fresh `dataDir`.
+
+**Reusable demo plumbing — do not reinvent:**
+
+| What | Where |
+|---|---|
+| mine / sendToAddress via bridge :5000 | `utils/bitcoin-node.ts` (`10.0.2.2` from Android — outbound to host needs no adb reverse) |
+| regtest unlock params (indexer `…:50001`, proxy `rpc://…:3000/json-rpc`) | `utils/env.ts` `buildRegtestConfig()` |
+| esplora-lag balance polling (`waitForAssetSpendable`) | `utils/flow-core.ts` — **esplora REST tip lags; single sync after mine is the same race web hit (§6.0l)** |
+| step/result plumbing | `utils/flow-core.ts` (`createFlowResults`, exclusive-flow guard) |
+
+**rn `UTEXOWallet` surface confirmed** (`src/wallet/utexo-wallet.ts`): `inflate`
+(:586) and `issueAssetIfa` (:562) exist for scenario D; `connectPeer` /
+`openChannel` / `createLightningInvoice` / `getLightningReceiveStatus` /
+`listPayments` / `listChannels` for E; `getNodeInfo` / `getNetworkInfo` for A.
+
+**Scenario E:** skip the utexo-lsp order flow — open a
+**direct channel to the Faucet RLN** (`10.0.2.2:9740` from the emulator, pubkey
+= fixture `FAUCET_PUBKEY`) with enough `push_msat` for the Faucet to have
+outbound liquidity, then `createLightningInvoice` and have the Faucet pay it
+via its REST API (`:3008`). Poll `getLightningReceiveStatus` → `Succeeded`.
+Peer ports (9737/9740) are **not** adb-reversed and don't need to be —
+`10.0.2.2` reaches the host directly.
+
+---
+
+### 6.0o Step 6b.4 results — scenario G, VSS round-trip (DONE)
+
+`rgb-sdk-web/tests/e2e/g-vss.spec.ts`, `VSS=1`. Full web suite: **6 specs green
+in 50 s**. **Step 7's prerequisite is met** — the restore half is now proven,
+not assumed.
+
+#### What it asserts
+
+Issue asset → backup → issue a second asset → backup → dispose → **fresh
+wallet, same mnemonic, empty `dataDir`** → `restoreFromVss()` in the
+init→unlock gap → `listAssets` equals the pre-backup list, `getAssetBalance`
+matches, and `ldkVssBackupInfo()` does not report the channel stream as still
+owned elsewhere (the fence takeover the restore performs by default).
+
+Observed: server version 1 → 2 across the two mutations, `restoreFromVss()`
+returning `{ walletRestored: true, serverVersion: 3 }`, both asset ids back in
+a wallet whose local storage never held them.
+
+The harness gained one option — `boot({ restore: true })` inserts
+`restoreFromVss()` between `init()` and `unlock()`, the only window the wallet
+accepts a restore in.
+
+#### Two findings for step 7 to reshape around
+
+1. **`vssBackup()` races the automatic backup.** Every state-changing op calls
+   `triggerAutoVssBackup()` fire-and-forget; an explicit `vssBackup()` right
+   after a mutation fails with `VSS version conflict: Transaction could not be
+   completed due to a possible conflict`. The Readme documents `vssBackup()` as
+   "force an upload now" with no mention of the race, and the caller has no way
+   to await the in-flight backup. Scenario G therefore observes the automatic
+   backups through `vssBackupInfo` instead; F-vss still covers explicit backup,
+   on a wallet that is not mutating.
+2. **`disableVssAutoBackup()` disables explicit backup too.** It sets
+   `vssAutoConfig = null`, and `vssBackup(config?)` falls back to exactly that
+   field — so after disabling auto-backup, `vssBackup()` throws "VSS is not
+   configured" unless the caller passes a config it has no public way to build
+   (the derived config is private). The two carrier methods are mutually
+   exclusive in practice.
+
+Both are contract-shape problems, not crashes, which is precisely step 7's
+subject — recorded here rather than patched, so the reshape can decide the
+semantics deliberately.
+
+#### One flake fixed, not papered over
+
+Scenario F failed once mid-session on `beginEnd.sendBtcEnd` with
+`bad-txns-inputs-missingorspent` — esplora's tip lag again (§6.0l). The
+begin→sign→end round-trip now retries with a `syncWallet` before each attempt,
+turning a race into a bounded wait; a genuine breakage still fails. The same
+lag made the second issuance in G panic the wasm runtime (`RuntimeError:
+unreachable` rather than a clean error — worth an upstream report), fixed by
+confirming a block and waiting for the wallet's view between issuances.
+
+---
+
 ### 6.1 No releases until verified — local linking
 
 **Decision:** nothing is published while this lands. All three SDKs consume each
@@ -1532,6 +1859,8 @@ real decision, not a detail:
 The second is recommended for the first pass. **Scenario D belongs here and
 only here** — it is the sole proof `rlnInflate` works rather than merely
 compiles, and web reaches inflation through the `beginEnd` carrier instead.
+*(Built as the second option — §6.0m, with markers over HTTP rather than
+logcat.)*
 
 **6b.4 — VSS.** Requires `VSS=1` and a second wallet instance. This is the
 prerequisite for step 7, and the reason step 7 is sequenced after 6b rather
