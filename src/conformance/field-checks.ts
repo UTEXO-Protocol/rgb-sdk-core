@@ -1,8 +1,8 @@
 /**
- * Field verification helpers for e2e scenarios (MIGRATION-PLAN-v3.md §7a.2).
+ * Field verification helpers for e2e scenarios.
  *
- * The bug class this migration was about is a method that exists, resolves, and
- * is **wrong**. `expect(result).toBeDefined()` cannot see it. These helpers make
+ * The bug class these guard against is a method that exists, resolves, and is
+ * **wrong**. `expect(result).toBeDefined()` cannot see it. These helpers make
  * the alternative cheap enough that there is no excuse for the weak assertion.
  *
  * Deliberately runner-agnostic: they throw plain `Error`s rather than depending

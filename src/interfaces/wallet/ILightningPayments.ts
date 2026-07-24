@@ -21,24 +21,19 @@ import type {
 } from '../../types/wallet-model';
 
 /**
- * Invoice request — narrowed to the true intersection of both native APIs
- * (§2.5 of MIGRATION-PLAN-v3.md).
+ * Invoice request — the true intersection of both native APIs.
  *
- * Replaces `CreateLightningInvoiceRequestModel`, which carried three fields the
- * web node cannot accept:
+ * Narrower than the old `CreateLightningInvoiceRequestModel`, which carried
+ * fields the web node cannot accept:
  *
- *   - `paymentHash` — web declared it and **silently dropped it**
- *     (`web/src/utexo/utexo-wallet.ts:697` vs `RlnNodeBinding.ts:348`, whose
- *     `createLnInvoiceLiveJson` takes four arguments). A caller asking for a
- *     HODL invoice received a plain one, with no error. HODL now belongs
- *     exclusively to `createHodlInvoice`.
- *   - `minFinalCltvExpiryDelta` — rn-only, moved to a platform extra.
- *   - `descriptionHash` — rn-only (BOLT11 `h` tag for LNURL-pay).
+ *   - `paymentHash` — web silently dropped it (a caller asking for a HODL
+ *     invoice got a plain one, with no error). HODL now belongs exclusively to
+ *     `createHodlInvoice`.
+ *   - `minFinalCltvExpiryDelta`, `descriptionHash` — rn-only, moved to platform
+ *     extras.
  *
- * `asset` uses `LightningAsset` (required `amount`), not rn's
- * `LightningAssetParam` with its `assetAmount` alias: one concept, one spelling.
- * This also removes web's runtime throw for a missing amount — the type now
- * enforces it.
+ * `asset` uses `LightningAsset` (required `amount`) — one spelling, and the
+ * type enforces the amount rather than throwing at runtime.
  */
 export interface CreateLnInvoiceRequest {
   amountSats?: number;
@@ -53,11 +48,8 @@ export interface ILightningPayments {
   ): Promise<LightningReceiveRequest>;
 
   /**
-   * §2.5 fix — no `mnemonic` parameter.
-   *
-   * The old contract accepted `mnemonic?`, which rn dropped silently (its
-   * signature has no such parameter). Mnemonic-based signing is a web-only
-   * capability and now lives behind the `psbt` carrier.
+   * No `mnemonic` parameter — mnemonic-based signing is web-only and lives
+   * behind the `psbt` carrier (rn's signature never had one).
    */
   payLightningInvoice(
     params: PayLightningInvoiceRequestModel

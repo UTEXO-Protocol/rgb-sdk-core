@@ -1,10 +1,6 @@
 /**
- * v3 wallet contract — decomposed into domain groups plus optional carriers.
- *
- * See MIGRATION-PLAN-v3.md. Not yet re-exported from the package root: web and
- * rn still compile against the v2 `IUTEXOWallet`, and both names cannot occupy
- * the root export at once. Wire this up in step 4, delete the old contract in
- * step 5.
+ * The UTEXO wallet contract — decomposed into domain groups plus optional
+ * carriers. Re-exported from the package root.
  */
 
 // ── Always present ────────────────────────────────────────────────────────────

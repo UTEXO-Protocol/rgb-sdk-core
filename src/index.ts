@@ -58,9 +58,7 @@ export {
 export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
 
-// The wallet contract — domain groups + optional carriers (MIGRATION-PLAN-v3.md).
-// The v2 `IUTEXOWallet`, `IWalletManager`, `WalletInitParams` and
-// `BaseWalletManager` were deleted in step 5.
+// The wallet contract — domain groups + optional carriers.
 export type {
   ILightningNode,
   ILightningPayments,

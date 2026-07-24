@@ -123,7 +123,7 @@ export const REMOVED_METHODS = [
   'getLightningSendFeeEstimate',
   'payLightningInvoiceBegin',
   'payLightningInvoiceEnd',
-  // never-shipped raw duplicates — see migration plan §4b
+  // never-shipped raw duplicates
   'listChannelsRaw',
   'getNodeInfoRaw',
   'decodeLnInvoiceRaw',
@@ -219,7 +219,8 @@ export interface ConformanceOptions {
    * the capability checks need an object — but not a working one. Construction
    * on both platforms only stores params (no wasm, no node, no network), so
    * this is cheap and safe to run in unit tests. Without it the capability
-   * block is skipped, which would leave §7's central guarantee unverified.
+   * block is skipped, which would leave the contract's central guarantee
+   * unverified.
    */
   createWalletSync?: () => Record<string, unknown>;
   describe?: DescribeFn;
@@ -269,8 +270,7 @@ export function runConformanceChecks(opts: ConformanceOptions): void {
     // The check the type system cannot make. `psbt?: IPsbtSigning` tells the
     // compiler the property may be absent; it says nothing about whether the
     // `capabilities` flag agrees, nor whether a carrier that *is* present does
-    // more than throw. Both are exactly how the old contract went wrong — it
-    // declared 67 methods and threw on 18 of them.
+    // more than throw — both are gaps a throwing stub would slip through.
     if (opts.createWalletSync) {
       const build = opts.createWalletSync;
 
@@ -444,7 +444,7 @@ export function runConformanceChecks(opts: ConformanceOptions): void {
 const CONFORMANCE_PROBE_INVOICE =
   'lnbc1p000000000000000000000000000000000000000000000000000000000000000000';
 
-// ── Field verification helpers (§7a.2) ───────────────────────────────────────
+// ── Field verification helpers ───────────────────────────────────────────────
 export {
   report,
   expectFields,

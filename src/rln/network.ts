@@ -7,9 +7,8 @@
  *   - UniFFI / RN  → PascalCase  (`'Regtest'`, `'SignetCustom'`)
  *   - wasm runtime → lowercase   (`'regtest'`)
  *
- * rn e2e (§6.0m) caught three methods returning the raw `'Regtest'` — the exact
- * cast-instead-of-normalize bug this migration exists to remove, invisible to
- * the type system because both sides are `string`.
+ * Without it, a method can return the raw `'Regtest'` — a cast-instead-of-
+ * normalize bug invisible to the type system because both sides are `string`.
  *
  * This is deliberately **not** `normalizeNetwork` from `utils/validation`.
  * That one validates *caller input*, where a mis-cased `'Mainnet'` is a config
@@ -58,6 +57,9 @@ export function normalizeRlnNetwork(raw: unknown): BitcoinNetwork {
 /** Non-throwing variant — `null` instead of throwing on unknown input. */
 export function tryNormalizeRlnNetwork(raw: unknown): BitcoinNetwork | null {
   if (typeof raw !== 'string') return null;
-  const key = raw.trim().toLowerCase().replace(/[_\-\s]+/g, '');
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[_\-\s]+/g, '');
   return NETWORK_ALIASES[key] ?? null;
 }

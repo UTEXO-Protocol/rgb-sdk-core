@@ -19,15 +19,8 @@ import type {
 } from '../../types/wallet-model';
 
 /**
- * Result of an atomic inflation.
- *
- * ⚠️ **Open item (§2.6).** The old contract returned `OperationResult`
- * (`{ txid, batchTransferIdx }`), but rn's UniFFI `InflateResponse` carries
- * **only** `txid` (`rn/ios/RGBLightningNode.swift:3756`). `batchTransferIdx` is
- * therefore optional here rather than having rn fabricate a placeholder.
- *
- * Decide during step 1 whether web's `batchTransferIdx` is load-bearing for any
- * caller; if not, drop the field entirely.
+ * Result of an atomic inflation. rn's node returns only `txid`, so
+ * `batchTransferIdx` is web-only and optional.
  */
 export interface InflateResult {
   txid: string;
@@ -40,17 +33,12 @@ export interface IRgbAssets {
   getAssetBalance(assetId: string): Promise<AssetBalance>;
 
   issueAssetNia(params: IssueAssetNiaRequestModel): Promise<AssetNIA>;
-  /** §2.4 fix — was `Promise<any>` in the old contract. */
   issueAssetIfa(params: IssueAssetIfaRequestModel): Promise<AssetIfa>;
 
   /**
-   * Atomic IFA inflation.
-   *
-   * In the core contract, not behind a capability: rn's node supports it
-   * (`SdkNode.inflate`, `RGBLightningNode.swift:1251`) — only the JS bridge is
-   * unwired (§2.6). The begin/end variants live on the `beginEnd` carrier.
-   *
-   * §2.5 note: no `mnemonic?` parameter — same reasoning as `onchainSend`.
+   * Atomic IFA inflation — in the core contract, not behind a carrier: both
+   * platforms' nodes support it. The begin/end variants live on the `beginEnd`
+   * carrier. No `mnemonic?` parameter — same reasoning as `onchainSend`.
    */
   inflate(params: InflateAssetIfaRequestModel): Promise<InflateResult>;
 

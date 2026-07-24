@@ -18,7 +18,7 @@ export interface IBitcoinWallet {
 
   /**
    * Atomic BTC send. The begin/end variants are on the `beginEnd` carrier —
-   * rn's node signs internally and exposes no PSBT (§2.7a).
+   * rn's node signs internally and exposes no PSBT.
    */
   sendBtc(params: SendBtcBeginRequestModel): Promise<string>;
 

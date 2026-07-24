@@ -1,8 +1,8 @@
 /**
  * Lightning node, peers and channels — always present.
  *
- * Every method here is implemented on both platforms (§2.1 of
- * MIGRATION-PLAN-v3.md). Nothing in this file may be a throwing stub.
+ * Every method here is implemented on both platforms; nothing may be a throwing
+ * stub.
  */
 
 import type {
@@ -26,13 +26,10 @@ export interface ILightningNode {
   openChannel(params: OpenChannelParams): Promise<OpenChannelResult>;
 
   /**
-   * §2.5 fix — `peerPubkey` and `force` are **required**.
-   *
-   * They were `peerPubkey?`/`force?` in the old contract, but rn declares both
-   * as required (`rn/src/wallet/utexo-wallet.ts:1131`). TypeScript accepted the
-   * mismatch because method parameters are bivariant, so `closeChannel(id)`
-   * type-checked and then passed `undefined` into a native call expecting a
-   * string. web already defaults `force`, so requiring both costs it nothing.
+   * `peerPubkey` and `force` are **required**. rn declares both required;
+   * making them optional here type-checks (parameter bivariance) but then
+   * passes `undefined` into a native call expecting a string. web already
+   * defaults `force`, so requiring both costs it nothing.
    */
   closeChannel(
     channelId: string,

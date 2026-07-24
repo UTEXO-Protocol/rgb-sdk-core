@@ -1,10 +1,9 @@
 /**
  * On-chain RGB transfers — always present.
  *
- * Supersedes `IOnchainProtocol` from `../IUTEXOProtocol.ts`, with two changes:
- *   - `onchainSendBegin`/`onchainSendEnd` move to the `beginEnd` carrier — rn's
- *     node has no PSBT begin/end surface at all (§2.7a).
- *   - `onchainSend` loses its `mnemonic?` parameter (§2.5).
+ * `onchainSendBegin`/`onchainSendEnd` live on the `beginEnd` carrier (rn's node
+ * has no PSBT begin/end surface), and `onchainSend` has no `mnemonic?`
+ * parameter.
  */
 
 import type {
@@ -22,12 +21,9 @@ export interface IOnchainTransfers {
   ): Promise<OnchainReceiveResponse>;
 
   /**
-   * §2.5 fix — no `mnemonic` parameter.
-   *
-   * rn's signature never had one (`rn:1058`), so a mnemonic passed by a caller
-   * was discarded by JS argument handling — no throw, no warning, different
-   * behaviour per platform. web's mnemonic path belongs behind the `psbt`
-   * carrier, not in a signature rn silently ignores.
+   * No `mnemonic` parameter — rn's signature never had one, so a mnemonic
+   * passed by a caller was silently discarded. web's mnemonic path lives behind
+   * the `psbt` carrier.
    */
   onchainSend(params: OnchainSendRequestModel): Promise<OnchainSendResponse>;
 

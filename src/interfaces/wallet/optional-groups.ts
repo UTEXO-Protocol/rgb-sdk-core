@@ -7,19 +7,14 @@
  * there is nothing to call. This is what replaces `throw new Error('not
  * implemented')`.
  *
- * Type guards were rejected (§3.1): `w is T & IGroup` is an **unchecked
- * assertion**, so a capability flag that disagrees with reality would be
- * believed by the compiler — reintroducing the very defect this plan removes.
+ * Type guards were rejected: `w is T & IGroup` is an **unchecked assertion**,
+ * so a capability flag that disagreed with reality would be believed by the
+ * compiler.
  *
- * ── Why these three, and why two of them are permanent ──────────────────────
- *
- * Root cause (§2.7a): **web runs two engines, rn runs one.** web bundles an
- * rgb-lib wallet in wasm *plus* the RLN node; rn has only the node. Verified:
- * `RlnWasmBinding.ts` calls `this.wallet.createUtxosBegin/inflateBegin/
- * sendBegin/sendBtcBegin`, while rn's UniFFI surface exposes no begin/end
- * method at all.
- *
- * So `IBeginEndFlows` and `IPsbtSigning` are architectural and permanent.
+ * Why these groups are web-only and permanent: web runs two engines — an
+ * rgb-lib wallet in wasm *plus* the RLN node — while rn has only the node. The
+ * rgb-lib wallet is what hands out PSBTs and begin/end flows; rn's node has no
+ * such surface. So `IBeginEndFlows` and `IPsbtSigning` are architectural.
  */
 
 import type { EstimateFeeResult } from '../../crypto/types';
@@ -37,11 +32,9 @@ import type {
 } from '../../types/wallet-model';
 
 /**
- * PSBT signing — **web only, permanent**.
- *
- * rn removed bdk-rn; `rn/src/crypto/signer.ts` is three functions that only
- * throw. `NativeExternalRLNSigner` does not restore this: it signs channel/LDK
- * operations *inside* the node, not arbitrary PSBTs handed in from JS (§2.8).
+ * PSBT signing — **web only, permanent**. rn has no JS-side PSBT signer; its
+ * node signs channel/LDK operations internally, not arbitrary PSBTs handed in
+ * from JS.
  */
 export interface IPsbtSigning {
   signPsbt(psbt: string, mnemonic?: string): Promise<string>;

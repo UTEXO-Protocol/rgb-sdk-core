@@ -1,30 +1,17 @@
 /**
  * The UTEXO wallet contract — composition root.
  *
- * The superseded shape still lives at `../IUTEXOWallet.ts` as
- * `IUTEXOWalletLegacy`, kept only until rn migrates off it (step 5 deletes it).
- *
- * ── What changed from `IUTEXOWalletLegacy` ──────────────────────────────────
- *
- * The old contract declared 67 methods and claimed all 67 existed on both
- * platforms. **18 of them threw on rn.** It was an intersection of
- * *signatures*, not of *capabilities* — a throwing stub satisfies `implements`,
- * so the compiler certified a contract that was ~27% untrue at runtime.
- *
- * This version:
- *   1. keeps only what both platforms genuinely perform, grouped by domain
- *      rather than listed alphabetically;
- *   2. moves platform-specific surface behind optional **carriers**, so an
+ * Design principles:
+ *   1. the always-present surface holds only what **both** platforms genuinely
+ *      perform, grouped by domain;
+ *   2. platform-specific surface lives behind optional **carriers**, so an
  *      unsupported call is a compile error rather than a runtime throw;
- *   3. adds lifecycle, which the old contract omitted — leaving consumers
- *      unable to construct or dispose a wallet portably;
- *   4. fixes five signature lies invisible to stub-scanning (§2.5).
+ *   3. lifecycle (construct / unlock / dispose) is part of the contract, so a
+ *      platform-agnostic consumer can be written portably.
  *
- * ── Invariant ───────────────────────────────────────────────────────────────
- *
- * A method may appear on the always-present surface **only if every platform
- * actually performs it**. If one platform throws, it belongs on a carrier. The
- * conformance suite (§7) enforces this; types alone cannot.
+ * Invariant: a method may appear on the always-present surface **only if every
+ * platform actually performs it**. If one platform throws, it belongs on a
+ * carrier. The conformance suite enforces this; types alone cannot.
  */
 
 import type { Network } from '../../crypto/types';
@@ -68,12 +55,9 @@ export interface IUTEXOWalletCore
   signMessage(message: string): Promise<string>;
 
   /**
-   * §2.5 fix — no `accountXpub` parameter.
-   *
-   * The old contract accepted `accountXpub?`; rn threw when it was provided
-   * ("verification is always against the node key") while web passed it
-   * through. Meaningless on an RLN node, so it leaves the shared contract; web
-   * may keep it as a platform extra.
+   * No `accountXpub` parameter — verification on an RLN node is always against
+   * the node key, so it is meaningless in the shared contract (web may keep it
+   * as a platform extra).
    */
   verifyMessage(message: string, signature: string): Promise<boolean>;
 
@@ -88,12 +72,9 @@ export interface IUTEXOWalletCore
   }): Promise<WalletBackupResponse>;
 
   /**
-   * §2.5 fix — `password` is **required**.
-   *
-   * It was `password?`, which rn rejected at runtime (it requires one) while
-   * web ignored it entirely (identity comes from init). The optional marker was
-   * a lowest common denominator that neither platform could honour. Required
-   * costs web nothing — it already ignores the value.
+   * `password` is **required** — rn needs one; web ignores it (identity comes
+   * from init), so requiring it costs web nothing and lets both platforms
+   * honour the signature.
    */
   vssClearFence(password: string): Promise<void>;
 
@@ -101,8 +82,8 @@ export interface IUTEXOWalletCore
    * Replicate wallet state to the remote store now; returns the new backup
    * version.
    *
-   * Intent, not mechanism (§2.7): each platform covers however many state
-   * stores it has. web uploads its rgb-lib wallet snapshot (the node stream
+   * Intent, not mechanism: each platform covers however many state stores it
+   * has. web uploads its rgb-lib wallet snapshot (the node stream
    * replicates continuously on its own); rn's node backs up its single store.
    * Both platforms also back up automatically — this is the "don't wait for
    * the next state change" call.
