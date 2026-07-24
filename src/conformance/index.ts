@@ -1,8 +1,8 @@
 /**
  * Conformance suite — the drift detector.
  *
- * `IUTEXOWallet` makes the compiler enforce *shapes*. It cannot enforce runtime
- * *values*: this compiles and ships `'SUCCEEDED'` to apps —
+ * `IUTEXOProtocol` makes the compiler enforce *shapes*. It cannot enforce
+ * runtime *values*: this compiles and ships `'SUCCEEDED'` to apps —
  *
  * ```ts
  * return raw as RlnInvoiceStatus;   // bypasses the normalizer, no error
@@ -38,7 +38,7 @@ import {
 /**
  * Methods asserted to exist at runtime.
  *
- * Kept as data, not `keyof IUTEXOWallet`: interfaces are erased at runtime, so
+ * Kept as data, not `keyof IUTEXOProtocol`: interfaces are erased at runtime, so
  * a wallet can satisfy the type and still be missing a method (e.g. a mangled
  * or tree-shaken build). This list is what catches that.
  */
@@ -247,7 +247,7 @@ function resolveRunner(opts: ConformanceOptions) {
 export function runConformanceChecks(opts: ConformanceOptions): void {
   const { describe, it, expect } = resolveRunner(opts);
 
-  describe(`${opts.name} — IUTEXOWallet conformance`, () => {
+  describe(`${opts.name} — IUTEXOProtocol conformance`, () => {
     describe('surface', () => {
       const target = () =>
         (opts.walletClass?.prototype ?? {}) as Record<string, unknown>;

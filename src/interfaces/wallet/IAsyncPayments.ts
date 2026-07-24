@@ -1,10 +1,11 @@
 /**
- * Lightning address (apay) — always present.
+ * Async payments (APay) — hash-pool registration with an invoice host / LSP,
+ * optionally attested to a Lightning Address. Always present.
  */
 
 import type { ApayNewResponse } from '../../rln';
 
-export interface ILightningAddress {
+export interface IAsyncPayments {
   apayNew(hostNodeId: string): Promise<ApayNewResponse>;
   apayNewWithAddress(
     hostNodeId: string,

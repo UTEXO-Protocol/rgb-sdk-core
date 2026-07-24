@@ -1,5 +1,5 @@
 /**
- * The UTEXO wallet contract — decomposed into domain groups plus optional
+ * The UTEXO protocol contract — decomposed into domain groups plus optional
  * carriers. Re-exported from the package root.
  */
 
@@ -9,7 +9,7 @@ export type {
   ILightningPayments,
   CreateLnInvoiceRequest,
 } from './ILightningPayments';
-export type { ILightningAddress } from './ILightningAddress';
+export type { IAsyncPayments } from './IAsyncPayments';
 export type { IOnchainTransfers } from './IOnchainTransfers';
 export type { IRgbAssets, InflateResult } from './IRgbAssets';
 export type { IBitcoinWallet } from './IBitcoinWallet';
@@ -23,5 +23,5 @@ export type {
 } from './optional-groups';
 
 // ── Composition root ──────────────────────────────────────────────────────────
-export type { IUTEXOWalletCore, IUTEXOWallet } from './IUTEXOWallet';
+export type { IUTEXOProtocolCore, IUTEXOProtocol } from './IUTEXOProtocol';
 export type { UTEXOWalletCreateParams } from './params';

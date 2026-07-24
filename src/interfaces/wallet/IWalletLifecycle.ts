@@ -5,8 +5,8 @@
  * construct, unlock and dispose a wallet without `if (platform === 'rn')` in
  * app code. The generic parameter carries the platform's unlock params:
  *
- *   class UTEXOWallet implements IUTEXOWallet<RnUnlockParams> { … }   // rn
- *   class UTEXOWallet implements IUTEXOWallet<void> { … }             // web
+ *   class UTEXOWallet implements IUTEXOProtocol<RnUnlockParams> { … }   // rn
+ *   class UTEXOWallet implements IUTEXOProtocol<void> { … }             // web
  */
 export interface IWalletLifecycle<TUnlockParams = void> {
   /**

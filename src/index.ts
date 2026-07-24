@@ -58,12 +58,12 @@ export {
 export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
 
-// The wallet contract — domain groups + optional carriers.
+// The UTEXO protocol contract — domain groups + optional carriers.
 export type {
   ILightningNode,
   ILightningPayments,
   CreateLnInvoiceRequest,
-  ILightningAddress,
+  IAsyncPayments,
   IOnchainTransfers,
   IRgbAssets,
   InflateResult,
@@ -72,8 +72,8 @@ export type {
   IPsbtSigning,
   IBeginEndFlows,
   WalletCapabilities,
-  IUTEXOWalletCore,
-  IUTEXOWallet,
+  IUTEXOProtocolCore,
+  IUTEXOProtocol,
   UTEXOWalletCreateParams,
 } from './interfaces/wallet';
 

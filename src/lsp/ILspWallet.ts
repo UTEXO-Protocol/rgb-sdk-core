@@ -6,8 +6,8 @@
  * instead decouples it: both platform wallets satisfy it structurally, and a
  * future platform needs no core change.
  *
- * Every member here is part of the shared wallet contract, so implementing
- * `IUTEXOWallet` implies satisfying `ILspWallet`.
+ * Every member here is part of the shared protocol contract, so implementing
+ * `IUTEXOProtocol` implies satisfying `ILspWallet`.
  */
 
 import type {

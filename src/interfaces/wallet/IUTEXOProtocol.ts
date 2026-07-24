@@ -1,5 +1,10 @@
 /**
- * The UTEXO wallet contract — composition root.
+ * The UTEXO protocol contract — composition root.
+ *
+ * The full surface a UTEXO client implements: RGB assets, Bitcoin, the
+ * Lightning node, Lightning payments and async payments, plus lifecycle. The
+ * plain "wallet" pieces are two of its domain groups (`IBitcoinWallet`,
+ * `IRgbAssets`), not the whole.
  *
  * Design principles:
  *   1. the always-present surface holds only what **both** platforms genuinely
@@ -17,7 +22,7 @@
 import type { Network } from '../../crypto/types';
 import type { WalletBackupResponse } from '../../types/wallet-model';
 import type { IBitcoinWallet } from './IBitcoinWallet';
-import type { ILightningAddress } from './ILightningAddress';
+import type { IAsyncPayments } from './IAsyncPayments';
 import type { ILightningNode } from './ILightningNode';
 import type { ILightningPayments } from './ILightningPayments';
 import type { IOnchainTransfers } from './IOnchainTransfers';
@@ -30,14 +35,14 @@ import type {
 } from './optional-groups';
 
 /**
- * Everything both platforms implement — 49 methods across six domain groups
- * plus the wallet-meta members below.
+ * Everything both platforms implement — the domain groups plus the wallet-meta
+ * members below.
  */
-export interface IUTEXOWalletCore
+export interface IUTEXOProtocolCore
   extends
     ILightningNode,
     ILightningPayments,
-    ILightningAddress,
+    IAsyncPayments,
     IOnchainTransfers,
     IRgbAssets,
     IBitcoinWallet {
@@ -105,8 +110,8 @@ export interface IUTEXOWalletCore
  * await wallet.psbt.signPsbt(psbt);         // narrowed by the check itself
  * ```
  */
-export interface IUTEXOWallet<TUnlockParams = void>
-  extends IUTEXOWalletCore, IWalletLifecycle<TUnlockParams> {
+export interface IUTEXOProtocol<TUnlockParams = void>
+  extends IUTEXOProtocolCore, IWalletLifecycle<TUnlockParams> {
   /** Derived from carrier presence — never stored independently. */
   readonly capabilities: WalletCapabilities;
 

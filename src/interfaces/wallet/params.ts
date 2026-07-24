@@ -1,8 +1,5 @@
 /**
  * Shared wallet construction parameters.
- *
- * Moved here from the deleted `../IUTEXOWallet.ts` (the v2 contract) — this is
- * the one piece of that file both platforms still use.
  */
 
 import type { BitcoinNetwork } from '../../types/wallet-model';
