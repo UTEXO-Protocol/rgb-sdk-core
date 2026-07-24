@@ -41,8 +41,7 @@ implement the same interface.
 ### Changed
 
 - Wallet params cleaned up (`src/interfaces/wallet/params.ts`,
-  `src/types/wallet-model.ts`) — unused fields dropped; a
-  `scripts/check-param-usage.mjs` guard flags params no client consumes.
+  `src/types/wallet-model.ts`) — unused fields dropped.
 - Source comments and JSDoc trimmed to state contracts and invariants only.
 
 ### Removed

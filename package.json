@@ -35,9 +35,7 @@
     "prettier": "prettier --write \"**/*.{js,ts}\"",
     "version:patch": "npm version patch && git push && git push --tags && npm publish --access public",
     "version:minor": "npm version minor && git push && git push --tags && npm publish --access public",
-    "version:major": "npm version major && git push && git push --tags && npm publish --access public",
-    "check:rln-versions": "node scripts/check-rln-versions.mjs",
-    "check:params": "node scripts/check-param-usage.mjs"
+    "version:major": "npm version major && git push && git push --tags && npm publish --access public"
   },
   "dependencies": {
     "@noble/hashes": "^2.0.1",
