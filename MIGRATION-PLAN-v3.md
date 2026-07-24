@@ -1,6 +1,8 @@
 # RGB SDK — Contract Decomposition Plan (v3)
 
-**Status:** in progress — the contract migration itself is complete; e2e is under way
+**Status:** steps 0–7b complete (contract, conformance, both e2e suites, VSS
+reshape, cleanup, demo migration). Only step 8 (v4 `IRlnNode`) remains, and it
+was always a separate plan.
 **Supersedes:** step 5c of `MIGRATION-PLAN-v2.md` (`IUTEXOWallet` as a single flat contract)
 **Does not supersede:** v2 steps 1–5b (done) or step 6 (conformance + version lock, still wanted)
 
@@ -13,15 +15,21 @@
 | | `tsc` | tests |
 |---|---|---|
 | rgb-sdk-core | ✅ | 195 (11 suites) |
-| rgb-sdk-web | ✅ | 248 (5 suites) |
-| rgb-sdk-rn | ✅ | 84 contract-conformance checks (`npm run check:contract`) |
+| rgb-sdk-web | ✅ | 245 (5 suites) |
+| rgb-sdk-rn | ✅ | 81 contract-conformance checks (`npm run check:contract`) |
 
-Plus: RLN version lock green (`0.9.0-beta.3` across web wasm, rn iOS, rn Android);
-**both e2e suites green** — web 6 specs (`rgb-sdk-web/tests/e2e/`), rn 5
-scenarios (`rgb-sdk-rn-demo/e2e/`).
+Plus: RLN version lock green (`0.9.0-beta.3` across web wasm, rn iOS, rn
+Android); `npm run check:params` green (§6.0r); **iOS builds** (a real
+`xcodebuild`, not just codegen — §6.0q); **both demos migrated to v3** and
+compiling, the web one building (§7b.5).
+
+**e2e:** web **8 passed / 1 pending** (`rgb-sdk-web/tests/e2e/`; the pending one
+is the upstream IFA-in-`listAssets` gap, §6.0r), rn **6 scenarios green
+including H** (`rgb-sdk-rn-demo/e2e/`).
 
 **Done:** steps 0 · 1 · 1b · 2 · 3 · 4a · 4b · 5 · 6 · 6c · 6b.0 · 6b.1 · 6b.2
-· 6b.3 · 6b.4 — see §6.0–§6.0o. **6b is complete; step 7 is unblocked.**
+· 6b.3 · 6b.4 · 6b.5 · **7** · **7b** — see §6.0–§6.0r and §7b. Every numbered
+step except **8** (v4 `IRlnNode`) is complete.
 
 Each e2e suite has its own README with the exact commands. Both need a
 provisioned stack, and **the two stacks cannot run at once** (both claim :3000,
@@ -33,10 +41,28 @@ provisioned stack, and **the two stacks cannot run at once** (both claim :3000,
   docker services itself; `VSS=1` adds vss-server on **:8181**, since Metro
   owns :8081), an emulator with the demo installed, then `yarn test:e2e`
 
-**Next up — step 7 (VSS reshape).** §6.0o proved the round-trip and left two
-contract-shape findings for the reshape to settle: `vssBackup()` races the
-automatic backup it cannot be awaited on, and `disableVssAutoBackup()` disables
-explicit backup as a side effect. Then step 8 (v4 `IRlnNode`).
+**Next up — step 8 (v4 `IRlnNode`)**, always scoped as its own plan. Smaller
+things left behind, none blocking:
+
+1. **⏸️ RESUME HERE — scenario I stopped reproducing; verify it (§6.0s.1).**
+   Three green wallet-funded opens on 2026-07-23, cold and warm, each verified
+   on-chain. The reason it looked unrepeatable: the spec's "the funding tx must
+   be broadcast" assertion **could never fail** (esplora answers
+   `/tx/<txid>/status` with 200 for a txid that never existed) — now fixed in
+   `i-funding.spec.ts` and in the demo. Not declared fixed: no failure has yet
+   been seen with correct instrumentation. Next is §6.0s.2 — run
+   `i-funding.spec.ts`, then the **full suite**, where H and I both failed while
+   H passes alone (still undiagnosed).
+2. **Upstream, not ours:** an IFA issued on web is invisible to `listAssets()`
+   (parked as a `test.fixme`, §6.0r); the wasm `openChannel` takes no
+   anchors/push/fee arguments (§6.0r); uniffi has only `vss_backup` and
+   `vss_clear_fence` — no `vss_backup_info`, which is why `backupStatus()` could
+   not join the contract (§6.0p, re-verified).
+3. **`IRgbLibBinding`** (98 lines) dies with step 8, not before (§7b.3).
+4. **README coverage** for the 14 exported-but-undocumented core symbols
+   (§7b.2), and rn's ~374 pre-existing lint errors (§7b.4).
+5. rn e2e is **Android-only** — the flow runner is portable, the host runner is
+   `adb`-shaped (§6.0m).
 
 ### Cold-start orientation
 
@@ -57,6 +83,7 @@ runs one**), then §3 (target shape). Everything else is detail.
 | rn conformance runner | `rgb-sdk-rn/scripts/check-contract.mjs` (+ `rn-stub-loader.mjs`) |
 | web e2e suite | `rgb-sdk-web/tests/e2e/` — harness + specs A–C, F, G (`npm run test:e2e`) |
 | rn e2e suite | `rgb-sdk-rn-demo/e2e/` + `app/e2e.tsx` + `scripts/run-e2e-android.mjs` (`yarn test:e2e`) |
+| Parameter-drop check | `rgb-sdk-core/scripts/check-param-usage.mjs` (`npm run check:params`) |
 | e2e stack fixture | `rgb-sdk-{web,rn}-demo/e2e-fixtures.json`, written by the demo start scripts |
 
 **Verify everything is still green:**
@@ -470,9 +497,12 @@ soon and properly.
 
 **Recommended target:** the contract should express *intent* (`backupNow()`,
 `backupStatus()`) and let each platform satisfy it automatically or manually,
-rather than exporting web's four-method imperative VSS API as the standard. Not
-scoped here — flagged so `IVssBackup` is understood as scaffolding with a
-deletion date, and so nobody builds new app code against it.
+rather than exporting web's four-method imperative VSS API as the standard.
+
+**Done in step 7 (§6.0p)** — with one correction: `backupStatus()` did *not*
+join the contract. rn's uniffi has no `vss_backup_info`, so a shared status
+method could not be answered honestly on both platforms (invariant 1). Only
+`backupNow()` is shared; web's status/config methods stay platform extras.
 
 ---
 
@@ -747,7 +777,9 @@ defect as the stubs, one layer down.
 | 6b.3 | ✅ **DONE** — flow-runner suite in `rgb-sdk-rn-demo/e2e/`, scenarios A–E, 5/5 green on the emulator; **scenario D proves `rlnInflate` runs**, and the suite found 3 real defects (§6.0m) | — | — |
 | 6b.4 | ✅ **DONE** — scenario G green: backup → mutate → restore into a fresh wallet, state equality asserted (§6.0o). **Step 7 is unblocked** | **7** | — |
 | 6c | ✅ **DONE** — protocol layer + UTEXO config table deleted, 8 files (§6.0h) | — | — |
-| 7 | *(follow-up)* Reshape VSS to intent-based; drop `vssBackup` flag (§2.7) | — | medium — **needs §7a scenario G** |
+| 7b | ✅ **DONE** — dead surface re-measured: 249 exports, 14 unused-but-internal, **0 orphans**; 4 more dead models deleted; **both demos migrated to v3** (§7b, §7b.5) | — | — |
+| 7 | ✅ **DONE** — `backupNow()` on the shared contract, `IVssBackup` + `vssBackup` flag deleted, rn's uniffi `vss_backup` wired through 5 layers (§6.0p) | — | — |
+| 6b.5 | ✅ **DONE** — scenario H green on **both** platforms: a device killed with a channel open restores wallet + channel, reconnects and closes it (§6.0q). Contract fallout in §6.0r | — | — |
 | 8 | *(v4)* `IRlnNode` replaces `IRgbLibBinding` | — | high — separate plan |
 
 ### 6.0 Step 1 results — signature diff (DONE)
@@ -1614,6 +1646,426 @@ confirming a block and waiting for the wallet's view between issuances.
 
 ---
 
+### 6.0p Step 7 results — VSS reshaped to intent (DONE)
+
+`IVssBackup` is gone. The contract now expresses **intent**, per §2.7:
+
+```ts
+// always-present, both platforms
+backupNow(): Promise<number>;      // replicate now, returns the new version
+
+capabilities = { psbtSigning, beginEndFlows }   // vssBackup flag deleted
+```
+
+Each platform covers however many state stores it has (§2.7a): web uploads its
+rgb-lib wallet snapshot while the node's channel stream replicates on its own;
+rn's node backs up its single store.
+
+#### rn gained the surface it always could have had
+
+`vss_backup()` was already in the uniffi API on both platforms and simply not
+wired — the same situation `inflate` was in before step 1b. It now runs through
+all five layers: `RgbModule.kt` · `RgbSwiftHelper.swift` + `Rgb.mm` ·
+`NativeRgb.ts` → `IRLN.ts` → `RLNBinding.ts` → `rln-manager.ts` →
+`backupNow()`. Verified on the emulator: **version 1 returned by the native
+node**, first time `vss_backup` has ever executed from this SDK.
+
+#### web keeps its extra VSS surface, off the contract
+
+`vssBackupInfo`, `configureVssBackup`, `disableVssAutoBackup`,
+`restoreFromVss`, `ldkVssBackupInfo`, `clearLdkVssFence` remain **web platform
+extras** rather than carrier members. A carrier needs a capability flag
+(invariant 2), and the flag is what this step deleted; `backupStatus()` cannot
+join the always-present surface either, because rn's uniffi has no
+`vss_backup_info` equivalent to answer it honestly. Parity there is an upstream
+`rgb-lightning-node` change, not an SDK one.
+
+#### Four defects fixed, all found by asserting instead of assuming
+
+1. **`vssBackup()` on web always returned `0`.** `vssBackupJson()` serializes a
+   bare number; the binding read `.version` off it and fell back to `0`. Every
+   version this SDK ever reported was fabricated — invisible until scenario G
+   compared the return value against `vssBackupInfo().serverVersion`. The
+   fallback is now an error, not a zero.
+2. **Explicit backup raced the automatic one** (`VSS version conflict`):
+   mutations fire `triggerAutoVssBackup()` un-awaited. All backups now queue
+   through one chain.
+3. **`disableVssAutoBackup()` disabled explicit backup too** — and deeper than
+   the SDK: it clears the *runtime's* VSS config, so `backupNow()` reconfigures
+   before uploading. Disabling the schedule is not disabling backup.
+4. Scenario F's begin/sign/end round-trips now retry with a resync — the
+   esplora tip lag of §6.0l, hit twice more.
+
+Green after the reshape: core 195 tests · web 245 unit + **6/6 e2e** · rn 81
+contract checks + **5/5 e2e**.
+
+---
+
+### 6.0q Step 6b.5 results — scenario H, device loss (DONE, both platforms)
+
+The scenario that proves backup is real: a wallet killed **mid-life, with a
+channel open**, restored elsewhere, and the restored channel then closed.
+
+| | rn (`e2e/scenarios/h-restore.ts`) | web (`tests/e2e/h-restore.spec.ts`) |
+|---|---|---|
+| the "device" | `shutdown()` + delete the storage dir | close the **browser context** (empty IndexedDB, fence still held) |
+| the restore | implicit — the node pulls from VSS when the wallet dir is absent | `init()` → `restoreFromVss()` → `unlock()` |
+| runtime | 83 s | 46 s |
+
+**rn, measured:** node pubkey identical, btc spendable identical
+(99 736 634), asset 400 → 400, transfers 1 → 1, transactions 3 → 3, channel
+`8268b4…03b6` back with the same capacity **and the same 52 013 000 msat local
+balance** — the channel opened at 49 013 000 and an invoice moved 3 000 sats in,
+so a restore that dropped the last HTLC would still have looked plausible. The
+restored channel was then closed and the funds returned on-chain (99 736 634 →
+99 786 602).
+
+**web, measured:** same pubkey, btc 100 162 715 identical, asset 400, channel
+`53e948…e460` back with 46 000 000 msat local (50 000 000 pushed by the Faucet
+minus a 3 000-sat payment out and fees), reconnected, closed, funds back
+on-chain. Full web suite: **7/7**.
+
+Three things this scenario forced into the open:
+
+- **The restored wallet must dial the peer itself.** It has the channel but not
+  the peer's *address* — that lived in the dead device's peer store. Without an
+  explicit `connectPeer`, the channel never becomes `isUsable` and a
+  cooperative close fails (`conflict with current node state` on rn).
+- **Storage identity is part of the restore.** The web harness minted a fresh
+  `dataDir`/`nodeRuntimeId` per boot, so the "restored" wallet came up as a
+  *different node*. Restoring means the same app on a new device: same mnemonic
+  **and** same storage identity, empty profile.
+- **`vssAllowEmptyRestore` must be `false`** on the restoring node — `true`
+  turns a failed restore into a silent fresh start, which would let the whole
+  scenario pass with an empty wallet.
+
+---
+
+### 6.0r `openChannel` and the declared-but-dropped parameter class
+
+Scenario H could not open a channel from the browser at all. Two causes, both
+worth recording because they are permanent platform facts, not bugs:
+
+1. **The wasm node's `openChannel` takes five arguments** — peer pubkey,
+   capacity, public, asset id, asset amount. There is no `push_msat`,
+   `with_anchors`, fee override or `temporary_channel_id`; `virtual_open_mode`
+   exists only on an `…WithOptions` variant and is in any case a **node-wide**
+   setting on web (`enableVirtualChannels` at init), not a per-channel one.
+   The contract declared all of them and web silently dropped six — a §2.5
+   violation the original sweep missed because it compared *signatures*, not
+   what the bodies do with them.
+2. **`openChannel` on web is only phase one of a two-phase flow — and our SDK
+   never exposed phase two.** The wasm node *can* open channels (upstream's own
+   `bindings/wasm-sdk/e2e-specs/helpers/flow.js` does it), but it does not fund
+   them for you:
+
+   ```
+   connectPeer → openChannel → listPendingFundingRequests   // FundingGenerationReady
+               → buildLightningFundingTx (BDK builds + signs)
+               → submitFundingTransaction  → FundingCreated → ready
+   ```
+
+   `rgb-sdk-web` wired **none** of the last three, so `wallet.openChannel()`
+   started a channel that could never complete — it sat at `ready: false,
+   localBalanceMsat: 0`, which is exactly what scenario H first hit.
+   **Now wired; the end-to-end open passed three times on 2026-07-23 but is
+   not yet declared fixed — see §6.0s.1/§6.0s.2 before relying on it.**
+   (`RlnWasmBinding` → `RlnWalletManager` → `UTEXOWallet`), with
+   `PendingFundingRequest` / `BuildFundingTxParams` / `FundingTx` /
+   `SubmitFundingParams` as **web-local** types — rn's node funds internally and
+   needs none of it. `listPendingFundingRequests` also drives the runtime
+   (`chainSyncTick` + `processNativeRuntimeQueue`) the way `listChannels`
+   already does: the wasm node has no background executor, so a read path that
+   does not pump never sees the event.
+
+3. **Who opens the channel is a property of the stack, not the SDK.** With the
+   handshake wired, a wallet-initiated open still fails here — the Faucet logs
+   `Rejected inbound channel … unsupported_scid_alias`. Both RLN daemons in
+   `start-lsp-web.sh` run with `--enable-virtual-channels-v0` (line 242), and
+   such a node requires an SCID alias the wasm open does not negotiate.
+   Upstream's wasm e2e works because it runs against a **regular** RLN.
+
+   So scenario H keeps the Faucet-opens topology (`POST /openchannel`), which
+   is also what `rgb-sdk-web-demo`'s regular-channel flow does — the gateway
+   relay is outbound-only, so the browser dials first and the native side opens
+   over that session. A peer without virtual channels now exists in the stack
+   (`regular_web`, §6.0s) and scenario I opens against it — **green three times
+   on 2026-07-23, but see §6.0s.1/§6.0s.2 before relying on it.**
+
+   *(An earlier draft of this section said "the counterparty must open" as if it
+   were a platform limit — wrong on two counts, and worth recording: the wasm
+   can open channels, and what actually blocks it here is a node **flag**. The
+   claim came from one failed attempt plus a comment in the demo, without
+   looking for a positive example. There was one, upstream.)*
+
+**Fix:** `OpenChannelParams` in core now holds only the five fields both
+platforms honour. rn widens it **locally** with its own extras
+(`pushMsat`, `withAnchors`, the fee overrides, `temporaryChannelId`,
+`pushAssetAmount`, `virtualOpenMode`) — core keeps the intersection, each SDK
+expands it, the same rule §6.0 set for platform extras.
+
+#### The class, swept — and the sweep corrected itself
+
+A first pass compared every params interface in core against both SDKs' sources
+and flagged 15 fields. **Six were the checker's fault**, and finding that out
+mattered more than the list:
+
+- `LspLnParams.descriptionHash` / `.minFinalCltvExpiryDelta` **are** honoured —
+  by `snakeCaseLnParams` in **core itself** (`UtexoLSPClient.ts`). The sweep
+  only read the SDKs. A field consumed by core is honoured for both platforms.
+- `LightningReceiveRequest.expiresAt`, `LightningSendRequest.consignmentEndpoint`,
+  `RestoreWalletRequestModel.backupFilePath`, `UTEXOWalletCreateParams.*` are
+  **response or construction models**, caught only because their names end in
+  `Request`/`Params`. Response models are supersets by design (§ `model.ts`
+  header) — a platform not populating an optional field is not a defect.
+
+The check now walks `src/interfaces/` for types actually used **as a parameter**
+on the contract (22 of them) and counts a core-side reference as honoured.
+
+#### The four real findings, resolved
+
+| Field | Verdict |
+|---|---|
+| `OpenChannelParams` ×6 | **moved to rn-local extras** — no wasm argument exists |
+| `IssueAssetIfaRequestModel.replaceRightsNum` | **deleted — superseded upstream.** rgb-lib **v0.3.0-beta.2** took `replace_rights_num: u8` and no reject list; the node builds against **tag v0.3.0-beta.27**, where that parameter is gone and `reject_list_url` took its place. REST (`IssueAssetIFARequest`), uniffi and wasm all take the same six: ticker/name/precision/amounts/inflation_amounts/reject_list_url. The field could not be honoured by any layer of this stack |
+| `VssBackupConfig.encryptionEnabled`, `.autoBackup` | **deleted** — never set, never read; encryption is always on in the runtime and the schedule is the SDK's own concern |
+| `VssBackupConfig.backupMode` (+ `VssBackupMode`) | **deleted** — core *set* it in `buildVssConfigFromMnemonic` and no binding ever read it; a unit test was pinning the dead value |
+
+`rejectListUrl` stays on the shared model, because the fix below made web
+honour it.
+
+#### The finding underneath: web's `issueAssetIfa` was issuing a CFA
+
+Chasing `rejectListUrl` turned up something worse. `RlnWasmBinding.issueAssetIfa`
+called **`issueAssetCfaValue`** and reshaped the result into an `AssetIfa`
+("best-effort mapping"), silently dropping `ticker`, `inflationAmounts` and
+`rejectListUrl` — and producing an asset with **no inflation rights**, which
+`inflateBegin` could never inflate. The wasm node has had `issueAssetIfaValue`
+all along, taking the same six arguments as rn's uniffi call.
+
+This is the §6.0f blind spot made concrete: a method that exists, resolves,
+returns a plausibly-shaped object, and is wrong. No stub probe catches it,
+because nothing throws.
+
+Fixed to call `issueAssetIfaValue`, with a real `RlnRawAssetIfa` mapper. Proven
+live — a new spec in `c-assets.spec.ts` issues an IFA on web and asserts
+`initialSupply: 500`, **`maxSupply: 1000`** (i.e. the inflation rights were
+requested), `knownCirculatingSupply: 500`. A CFA has none of those fields.
+
+**`listAssets` now maps IFA too** (`normalizeListAssets` hard-coded `ifa: []`,
+while the call already asks the wasm for `['Nia','Ifa']`). That fix is correct
+but **does not surface the asset**: an IFA issued through the node stays
+invisible to `listAssets()` on web — every schema array comes back empty, and
+`syncWallet` + `refreshWallet` do not change it — while a NIA issued through
+the *same* node handle appears immediately. That asymmetry is below the SDK
+(rgb-lib/wasm), so the cross-check rn's scenario D performs is parked as a
+`test.fixme` in `c-assets.spec.ts`: visible as pending in every run, never a
+silent pass. rn has no such gap.
+
+#### iOS — compiled, not just codegen-checked
+
+§6.0g verified `rlnInflate` on iOS by matching the codegen output against
+`Rgb.mm`. The `vssBackup` wiring from step 7 got a **real build**:
+`xcodebuild -workspace myapp.xcworkspace -scheme myapp -sdk iphonesimulator`
+→ **BUILD SUCCEEDED**, with `rlnVssBackup` present in `RgbSpecJSI.h`,
+`RgbSpecJSI-generated.cpp` and the method map. The Swift helper and the
+ObjC bridge both compile.
+
+#### The demos were not evidence of the current API
+
+At the time of this finding, `rgb-sdk-web-demo` depended on the **published**
+`@utexo/rgb-sdk-web@1.0.0-beta.10` rather than the local source, so it compiled
+against the pre-v3 API — which is why its `connectPeer(addr, pubkey)` looked
+authoritative and was not. `rgb-sdk-rn-demo` linked locally but carried 10
+`wallet.send(...)` type errors from the §2.3 deletion. **Both have since been
+migrated — §7b.5.** What the web demo proved even while stale is *stack*
+behaviour (relay direction, who opens a channel), which is independent of the
+SDK version.
+
+---
+
+### 6.0s scenario I (wallet-funded channel) — did not reproduce; the instrument was broken
+
+**Read this before touching `i-funding.spec.ts` or the funding methods.**
+
+> **2026-07-23 update.** Scenario I passed **three times in a row** from the
+> demo (cold wallet and warm, two different chains), each verified on-chain.
+> The reason it looked unrepeatable is recorded in §6.0s.1: the assertion that
+> was supposed to prove the funding tx had been broadcast **could never fail**,
+> so the original diagnosis rested on a measurement that did not measure. The
+> "what was tried" list below is kept as history — but read §6.0s.1 first,
+> because parts of it were reasoning from a broken instrument. Not yet declared
+> fixed: see §6.0s.2 for what would settle it.
+
+#### What is done and green
+
+- **Third daemon added to the web stack.** `start-lsp-web.sh` now takes
+  `VIRTUAL_CHANNELS=0` per call and starts `regular_web` — REST **:3110**,
+  peer **:9750**, *without* `--enable-virtual-channels-v0` — because a node
+  with that flag rejects a wasm-initiated open (`unsupported_scid_alias`).
+  Its `REGULAR_PUBKEY` / `REGULAR_URL` / `REGULAR_PEER_PORT` are in
+  `e2e-fixtures.json`; `stop` kills it. Verified working.
+- **The funding handshake is wired** in `rgb-sdk-web` (binding → manager →
+  wallet): `listPendingFundingRequests`, `buildLightningFundingTx`,
+  `submitFundingTransaction`, with web-local types in `src/rln/index.ts`.
+- Everything else in the suite is green: **7 specs pass**, 1 skipped
+  (the IFA-`listAssets` upstream gap).
+
+#### What is NOT working — the open issue
+
+`tests/e2e/i-funding.spec.ts` **passed exactly once** (fresh stack, 17:08) and
+has failed every run since. The failure is always the same:
+
+```
+regular_web log:  Accepted inbound channel …
+                  Channel … is pending awaiting funding lock-in!     ← stops here
+spec:             Error: the funded channel must become ready
+```
+
+**These parts work on every run** (do not re-debug them):
+
+| Step | Evidence |
+|---|---|
+| `openChannel` | returns a `temporaryChannelId` |
+| `listPendingFundingRequests` | correct `outputScriptHex`, `channelValueSat: 100000`, right counterparty |
+| `buildLightningFundingTx` | valid signed tx + well-formed txid |
+| `submitFundingTransaction` | peer logs `Accepted inbound channel` → FundingCreated/FundingSigned completed |
+
+**The failure is the funding transaction never confirming.** In the runs before
+the broadcast fix, esplora returned `Transaction not found` for the txid — not
+even in the mempool.
+
+#### What was tried
+
+1. **Pumping the runtime in the new read path** — `listPendingFundingRequests`
+   calls `chainSyncTick` + `processNativeRuntimeQueue` (upstream's
+   `pumpRuntime` does both). Necessary, not sufficient.
+2. **Draining the native runtime queue in the shared drive beat** —
+   `RlnNodeBinding.driveRgbWorkBestEffort` now also calls
+   `processNativeRuntimeQueueValue()`, so every `listChannels` flushes it.
+   Did not fix it.
+3. **Explicit broadcast** — the wasm docs are explicit that
+   `buildLightningFundingTx` *builds but does not broadcast*, and that the
+   caller must "trigger a broadcast (LDK's chain interface, or an out-of-band
+   relay)". `submitFundingTransaction` now also calls
+   `chainSyncEnqueueRebroadcastTx(txid, hex)` when a `txid` is supplied.
+   Still fails.
+
+#### Where to start tomorrow
+
+- **Prove the broadcast independently.** Take the `funding_tx_hex` from a failed
+  run and POST it to esplora (`:3002/tx`) or bitcoind directly. If it is
+  accepted, the tx is valid and only the broadcast path is broken; if it is
+  rejected, the tx itself is wrong (most likely stale-view input selection —
+  the §6.0l race, which would also explain why the one passing run was on a
+  freshly provisioned chain).
+- **Compare against upstream's working flow**
+  (`bindings/wasm-sdk/e2e-specs/helpers/flow.js::fundChannelAndWaitForReady`).
+  It broadcasts via its **regtest controller**, not through the SDK — so the
+  simplest green path may be for the spec to broadcast out-of-band (the gateway
+  has `dev/regtest/*` helpers) and keep the in-SDK enqueue as a convenience.
+- **Also unexplained:** in a *full-suite* run both H and I failed, while H
+  passes alone and in an H+I pair. H's full-suite failure has not been
+  diagnosed at all — check it separately before assuming the two are related.
+
+#### Honest note on the earlier claim
+
+§6.0r was updated mid-session to say the wallet-initiated path "works, verified
+live". That was based on **one** passing run and was overstated — corrected
+here. The three methods do what they say; the end-to-end channel open is not
+yet repeatable.
+
+---
+
+### 6.0s.1 What the 2026-07-23 session found
+
+A repro was built into `rgb-sdk-web-demo` — **"Wallet-funded open"** on the
+regular-channel page (`useRegularChannelFlow.runWalletFundedOpen`) — so the
+scenario can be driven by hand, in a browser, without Playwright. It runs the
+same sequence as `i-funding.spec.ts` against `regular_web`, and when the funding
+tx does not reach the indexer it POSTs the identical hex straight to esplora to
+split "invalid tx" from "broken broadcast".
+
+**The broadcast assertion never asserted anything.** `i-funding.spec.ts` polled
+`GET /tx/<txid>/status` and treated `r.ok` as "the tx exists". Esplora answers
+that endpoint with **HTTP 200 `{"confirmed":false}` for a txid that has never
+existed** — verified directly against the regtest indexer with 64 zeros as the
+txid. So the poll labelled *"the funding tx must be broadcast"* passed instantly
+on every run, broadcast or not. Presence must be read from `GET /tx/<txid>`,
+which 404s on an unknown txid. Fixed in the spec and in the demo helper
+(`indexerTxSeen`), both of which now also distinguish mempool from confirmed.
+
+This matters for the history above: the note that esplora "returned
+`Transaction not found` … not even in the mempool" cannot have come from that
+assertion, and the failures attributed to a missing broadcast were diagnosed
+with an instrument that always read "present".
+
+**Three green runs, verified on-chain, not from the log:**
+
+| run | wallet | funding tx | result |
+|---|---|---|---|
+| 11:55 | warm (after the full flow) | block 192, 2 inputs, 312 B | ready ✓ |
+| 12:07 | cold (create → fund → open) | block 172, 1 input, 205 B | ready ✓ |
+| 12:13 A | cold | block 196, 2 inputs, 312 B | ready ✓ |
+
+Each confirmed against `regular_web`'s `/listchannels` **and** the indexer, so
+the pass does not depend on the demo's own reporting.
+
+**The cold/warm experiment was confounded — and that is worth remembering.**
+The point of a cold run was to test the stale-view input-selection theory
+(§6.0l): cold fails + warm passes would have confirmed it. But the stack was
+restarted between the warm and cold runs (to pick up the new `VITE_REGULAR_*`
+env), which reset the chain — tip went *backwards* 198 → 179 and the warm run's
+txid started returning 404. So the cold run landed on a freshly provisioned
+chain, exactly the condition §6.0s says has always passed. Cold wallet and
+fresh chain moved together; the run cannot separate them. **Any future
+cold/warm comparison must not restart the stack**, or it proves nothing.
+
+**Every failure observed in the session was in the repro code, not the SDK:**
+
+1. *"peer handshake did not complete within timeout"* on a second run —
+   `runWalletFundedOpen` called `connectPeer` unconditionally. Dialling an
+   already-connected peer does not no-op, it hangs. Every other flow in that
+   file already routes through an `ensureXConnected` guard that checks
+   `listPeers` first; this one did not. Now `ensureRegularConnected`.
+2. *A run reporting "ready ✓" after a single poll* — `waitFundedChannelReady`
+   matched on `peerPubkey`, so a second run latched onto the **first** run's
+   already-ready channel. Now matches on `fundingTxid`
+   (`LightningChannel.fundingTxid`), falling back to pubkey only when absent.
+3. The `/status` assertion above.
+
+**One channel left `ready: false`, and it is not evidence of a stall.** Run B's
+funding tx confirmed (block 196) and still showed `ready: false` at 7
+confirmations. That run had exited early on bug 2 — and once the flow stops
+polling, nothing drives the wasm node, which has no background executor and so
+never notices the confirmations or sends its `channel_ready`. Starvation, not a
+stall. The general rule this reinforces: **on web, a channel that is not being
+polled is a channel that is not progressing** — the same fact §2.7a states about
+two engines, showing up in the funding path.
+
+#### 6.0s.2 What would actually settle it
+
+Three greens are not a fix, and this section should not be closed on them:
+
+- All three ran on chains younger than ~200 blocks. Not one failure has yet been
+  observed *with correct instrumentation*, so there is no confirmed cause — only
+  a scenario that stopped reproducing.
+- **Run `i-funding.spec.ts` now that its assertion is real.** Until this session
+  the spec could pass its broadcast check while the tx was absent; whatever it
+  reports now is the first trustworthy signal from the suite.
+- **Run the full suite.** §6.0s records that H and I both failed in a full-suite
+  run while H passes alone and in an H+I pair. That is still undiagnosed, and it
+  is the most likely place a real defect is hiding.
+- If a cold/warm comparison is repeated, do it **without restarting the stack**,
+  and use "Clear wallets & reload" to reset the wallet while keeping the chain.
+
+The demo button is the cheap path for all of this: `rgb-sdk-web-demo` →
+regular-channel page → **Wallet-funded open**, labelled `COLD` on a fresh tab
+and `warm` once a wallet exists. Each poll logs the full `listChannels` with the
+tracked channel starred, so which channel moved is visible rather than inferred.
+
+---
+
 ### 6.1 No releases until verified — local linking
 
 **Decision:** nothing is published while this lands. All three SDKs consume each
@@ -1794,6 +2246,38 @@ Verify: `backupExists`, `serverVersion` increments, restored asset list equals
 the pre-backup list. Reshaping VSS to an intent-based contract without this
 is changing backup semantics blind.
 
+**H. Backup survives device loss** — *the scenario that proves backup is real*
+— web (`VSS=1`) and rn.
+
+G proves a round-trip on a quiet wallet. H proves it on a wallet in the middle
+of its life, and destroys the device **while a channel is open** — the case
+where a lost backup costs money rather than convenience.
+
+1. Fund on-chain from the Faucet, `createUtxos`, issue an asset — verify fields
+   as scenarios B/C do.
+2. `connectPeer(Faucet)` → `openChannel` with `pushMsat` → wait ready → verify
+   channel fields; settle at least one invoice so value has actually moved
+   **off-chain** and the channel balance is not the opening balance.
+3. Snapshot everything a user would notice: btc balance, asset balances,
+   `listTransfers`, `listTransactions`, `listChannels`.
+4. **Destroy the wallet with the channel still open, without a clean
+   shutdown.** web: close the browser *context* — a new context is a new
+   profile with empty IndexedDB, and the dead tab still holds the VSS fence,
+   which is exactly the state a lost device leaves behind. rn: `destroy()` and
+   boot the next node on a **fresh `storageDirPath`**.
+5. Restore. web: `init()` → `restoreFromVss()` (takes the fence over) →
+   `unlock()`, which is where channel state comes back. rn: nothing to call —
+   the node restores automatically when the local wallet dir is absent and VSS
+   has a backup (`maybe_restore_rgb_from_vss`, `ldk.rs`). **`vssAllowEmptyRestore`
+   must be `false` here**: it turns a failed restore into a silent fresh start,
+   which would make this scenario pass with an empty wallet.
+6. Verify the snapshot matches — balances, transfers, transactions, and
+   **`listChannels`: same `channelId`, capacity, and the balances that were
+   moved off-chain**.
+7. Close the channel from the restored wallet and assert the funds come back
+   on-chain. A restored channel that cannot be closed is not a restored
+   channel.
+
 ### 7a.4 Runtime feasibility — checked, and it splits the work in two
 
 Before planning sub-steps, two facts were verified rather than assumed. They
@@ -1828,6 +2312,7 @@ independently of either.
 | **6b.2** | web e2e — Playwright, scenarios A–C, F | 6b.0, 6b.1 | medium |
 | **6b.3** | rn e2e — emulator, scenarios A–E incl. **D (inflate)** | 6b.0, 6b.1 | medium-high |
 | **6b.4** | Scenario G (VSS round-trip), `VSS=1` | 6b.2 | medium |
+| **6b.5** | Scenario H (device loss with channels open), both tracks | 6b.3, 6b.4 | medium-high |
 
 **6b.0 — field helpers.** `report`, `expectFields`, `expectNoWireKeys` (§7a.2)
 in `@utexo/rgb-sdk-core/conformance`, with their own unit tests in core. Pure
@@ -1891,34 +2376,47 @@ work, and not a reason to delay the local suite.
 
 ## 7b. Remaining cleanup — measured dead surface
 
-Audited by extracting all 105 exports from `core/src/index.ts` and checking each
-for real use in `rgb-sdk-web/src`, `rgb-sdk-rn/src` and both demos, excluding
-pass-through re-export lines. **52 are unused outside core.** Not all are dead —
-core is a library and some are legitimate public API — so they split three ways.
+**Re-measured (this pass).** Every export in core's built `index.d.ts` was
+checked against `rgb-sdk-{web,rn}/src`, both demos and all three test suites:
 
-### 7b.1 Dead — superseded by v3, delete
-
-| Target | Lines | Evidence |
+| | then (first audit) | now |
 |---|---|---|
-| `interfaces/IUTEXOProtocol.ts` | 65 | `ILightningProtocol`/`IOnchainProtocol`/`IUTEXOProtocol`. **Nothing implements them** — both wallets moved to `IUTEXOWallet`. Superseded by `IOnchainTransfers` + the Lightning group split. |
-| `utexo/utexo-protocol.ts` | 123 | `LightningProtocol`/`OnchainProtocol`/`UTEXOProtocol` base classes. Nothing extends or instantiates them; they also contradict "no base classes" (§1.1). |
-| `utexo/config/utexo-presets.ts` | 142 | `testnetPreset`/`mainnetPreset` |
-| `utexo/utils/network.ts` | 119 | `utexoNetworkMap`, `utexoNetworkIdMap`, `getUtxoNetworkConfig`, `getDestinationAsset` |
-| `utexo/config/options.ts` | 32 | `ConfigOptions` |
+| exports | 105 | **249** |
+| unused outside core | 52 | **14** |
+| used by nobody at all | — | **0** |
 
-The last three are one cluster: a UTEXO network-config table re-exported by both
-SDKs and **used by neither**. Endpoint resolution actually happens through
-`DEFAULT_RLN_URLS` (web) and `network-defaults.ts` (rn). ~480 lines total.
+The jump in export count is the contract split (§3) — domain groups, carriers
+and their models are all exported now. What matters is the second row: nothing
+in core is orphaned.
+
+### 7b.1 Dead — superseded by v3 — ✅ **DONE**
+
+All five targets (`interfaces/IUTEXOProtocol.ts`, `utexo/utexo-protocol.ts`,
+`utexo/config/utexo-presets.ts`, `utexo/utils/network.ts`,
+`utexo/config/options.ts`, ~480 lines) were deleted in **step 6c (§6.0h)**;
+this section had not been updated to say so.
+
+**Four more deleted this pass** — declaration-only models with no field, no
+signature and no consumer anywhere:
+
+| Deleted | Was |
+|---|---|
+| `RestoreWalletRequestModel` | file-backup restore request; no SDK implements a restore-from-file call |
+| `WalletRestoreResponse` | its response half |
+| `GetFeeEstimationRequestModel` | `estimateFeeRate(blocks: number)` takes a number, not a model |
+| `IssueAssetNIAResponse` | `issueAssetNia` returns `AssetNIA` directly |
+
+(Plus `VssBackupMode` and three `VssBackupConfig` fields in §6.0r.)
 
 ### 7b.2 Keep — genuine public API
 
-Unused by our two consumers but reasonable for a library user: the key-derivation
-family (`deriveKeysFromSeed`, `getXpubFromXpriv`, `accountXpubsFromMnemonic`,
-`deriveKeysFromXpriv`, `accountDerivationPath`), the validators
-(`validateHex`, `validateBase64`, …), `FetchClient`, and the contract's own
-building blocks (`ILightningNode`, `IRgbAssets`, `IWalletLifecycle`, …) which
-consumers need in order to narrow carriers. Keep, but they deserve README
-coverage — an exported symbol nobody documents is one nobody knows to use.
+The 14 exports unused by our consumers but referenced inside core are all
+legitimate: the key-derivation family (`accountDerivationPath`, `SeedInput`,
+`toNetworkName`, `BIP32Factory`), `FetchClient`, `Logger`,
+`resolveTransportEndpoint`, `getVssConfigs`, the message-signing param models,
+and domain types reachable through other types (`AssetIface`, `BlockTime`,
+`LightningAsset`, `InflateResult`). Keep — but they still deserve README
+coverage: an exported symbol nobody documents is one nobody knows to use.
 
 ### 7b.3 Blocked on v4
 
@@ -1935,16 +2433,44 @@ dies with step 8, not before.
 - **web** — ~~`SignPsbtOptions`~~ **keep**: unlike rn's empty placeholder, web's
   carries `signOptions?: BDKSignOptions` and its `crypto/signer.ts` is live
   (§6.0i).
-- **both** — the `utexo-presets` re-export blocks in each `src/index.ts` go with
-  §7b.1.
+- **web-demo** — the `replaceRightsNum` input and its state were deleted with
+  the field itself (§6.0r); the demo's own staleness is below.
 - **rn** — ~374 pre-existing `no-unused-vars` lint errors, unrelated to this
   work and worth their own pass.
 
-### 7b.5 Suggested order
+### 7b.5 Demo migration — ✅ **DONE**
 
-`7b.1` first: it is pure deletion with no consumers, verifiable by `tsc` in all
-three packages, and shrinks core by roughly a fifth. `7b.4` follows naturally
-with the signer split. `7b.3` waits for v4.
+Neither demo's UI exercised the v3 contract. Both do now.
+
+**`rgb-sdk-rn-demo` — 10 `tsc` errors → 0.** `wallet.send({...})` →
+`onchainSend({...})` at 10 call sites across five `flows/*` files and
+`app/(tabs)/utexo.tsx`. A pure rename: every call already passed exactly
+`OnchainSendRequestModel`'s fields. Two `wChanValidate` labels were updated too,
+so the flow log does not report `send(...)` for a call that no longer exists.
+
+**`rgb-sdk-web-demo` — 21 `tsc` errors → 0, and it builds.** The demo resolved
+`@utexo/rgb-sdk-web` from the **published** `1.0.0-beta.10`; only core was
+aliased to local source. The same "local sibling if it exists, else npm"
+pattern the repo already used for core now covers the SDK as well
+(`vite.config.ts` + `tsconfig.json`), so CI/Docker still falls back to the
+package. `npx vite build` succeeds against local source (4.6 s;
+`RlnNodeBinding` chunk present, proving the alias resolved).
+
+Pointing it at v3 surfaced 21 errors — **several semantic, not just renames**:
+
+| Drift | v3 |
+|---|---|
+| `getLightningSendRequest` / `getLightningReceiveRequest` (11 sites) | `getLightningSendStatus` / `getLightningReceiveStatus` |
+| `payLightningInvoiceBegin` → `signPsbt` → `payLightningInvoiceEnd` | atomic `payLightningInvoice`; the three-step UI and its PSBT state deleted |
+| `getOnchainSendStatus(invoice)` | gone — a send's state *is* its transfer's state; rewritten as `listOnchainTransfers()` filtered by `invoiceString` |
+| `LightningPayment.rawStatus` (4 sites) | `status` — the raw passthrough field no longer exists |
+| `connectPeer(addr, pubkey)` (2 sites) | `connectPeer('pubkey@host:port')` |
+| two `=== 'Settled'` comparisons | `'Succeeded'` — the canonical vocabulary |
+
+The last row is worth keeping in mind: one of those comparisons only became a
+**compile error after** the method rename (`RlnPaymentStatus` and `"Settled"`
+have no overlap). A demo pinned to an old SDK hides exactly the drift the
+normalizers exist to prevent.
 
 ---
 

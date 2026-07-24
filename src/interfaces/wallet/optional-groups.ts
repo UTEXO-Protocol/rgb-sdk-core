@@ -2,7 +2,7 @@
  * Optional capability groups — exposed as **carriers**, never as stubs.
  *
  * Each group is reached through an optional property on the wallet
- * (`wallet.psbt`, `wallet.beginEnd`, `wallet.vss`). Presence *is* the type:
+ * (`wallet.psbt`, `wallet.beginEnd`). Presence *is* the type:
  * where a platform cannot perform the group, the property is `undefined` and
  * there is nothing to call. This is what replaces `throw new Error('not
  * implemented')`.
@@ -20,7 +20,6 @@
  * method at all.
  *
  * So `IBeginEndFlows` and `IPsbtSigning` are architectural and permanent.
- * `IVssBackup` is not — it is scaffolding with a deletion date (§2.7).
  */
 
 import type { EstimateFeeResult } from '../../crypto/types';
@@ -35,8 +34,6 @@ import type {
   SendAssetEndRequestModel,
   SendBtcBeginRequestModel,
   SendBtcEndRequestModel,
-  VssBackupConfig,
-  VssBackupInfo,
 } from '../../types/wallet-model';
 
 /**
@@ -76,24 +73,6 @@ export interface IBeginEndFlows {
 }
 
 /**
- * Imperative VSS replication — **temporary scaffolding (§2.7)**.
- *
- * @deprecated This group encodes web's *manual* backup flow, which exists only
- * because web has two state stores to replicate (the rgb-lib wallet and the
- * node) while rn has one and backs it up automatically inside the node.
- *
- * The target is an intent-based contract (`backupNow()`, `backupStatus()`) that
- * each platform satisfies with whatever number of stores it has. Do not build
- * new application code against this interface — see step 7 of the plan.
- */
-export interface IVssBackup {
-  configureVssBackup(config: VssBackupConfig): Promise<void>;
-  disableVssAutoBackup(): Promise<void>;
-  vssBackup(config?: VssBackupConfig): Promise<number>;
-  vssBackupInfo(config?: VssBackupConfig): Promise<VssBackupInfo>;
-}
-
-/**
  * Derived, never stored.
  *
  * Computed from carrier presence so the flags cannot drift from reality:
@@ -102,13 +81,10 @@ export interface IVssBackup {
  *     return {
  *       psbtSigning:   this.psbt     !== undefined,
  *       beginEndFlows: this.beginEnd !== undefined,
- *       vssBackup:     this.vss      !== undefined,
  *     } as const;
  *   }
  */
 export interface WalletCapabilities {
   readonly psbtSigning: boolean;
   readonly beginEndFlows: boolean;
-  /** @deprecated Temporary — see {@link IVssBackup}. */
-  readonly vssBackup: boolean;
 }

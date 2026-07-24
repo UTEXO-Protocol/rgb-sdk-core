@@ -63,6 +63,7 @@ export const IUTEXO_WALLET_METHODS = [
   'failTransfers',
   'createBackup',
   'vssClearFence',
+  'backupNow',
   'signMessage',
   'verifyMessage',
   // assets
@@ -109,7 +110,7 @@ export const IUTEXO_WALLET_METHODS = [
  * Methods that must NOT be present on **either** platform.
  *
  * Deliberately excludes surface a platform legitimately keeps as an extra:
- * web still exposes flat `signPsbt`/`vssBackup`/`goOnline`/`getXpub` because it
+ * web still exposes flat `signPsbt`/`vssBackupInfo`/`goOnline`/`getXpub` because it
  * genuinely performs them, while rn deleted them. Asserting their absence
  * globally would be wrong. What the carriers guarantee is checked by the
  * capability block instead.
@@ -161,16 +162,6 @@ export const CARRIER_GROUPS = [
       'sendBtcEnd',
       'inflateBegin',
       'inflateEnd',
-    ],
-  },
-  {
-    property: 'vss',
-    flag: 'vssBackup',
-    methods: [
-      'configureVssBackup',
-      'disableVssAutoBackup',
-      'vssBackup',
-      'vssBackupInfo',
     ],
   },
 ] as const;

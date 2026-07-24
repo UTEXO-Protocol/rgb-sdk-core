@@ -21,33 +21,19 @@ export interface WalletBackupResponse {
   backupPath: string;
 }
 
-export interface WalletRestoreResponse {
-  message: string;
-}
-
-export interface RestoreWalletRequestModel {
-  backupFilePath: string;
-  password: string;
-  dataDir: string;
-}
-
 // ─── VSS (Versioned Storage Service) backup ───────────────────────────────────
 
-/** VSS backup mode: Async (fire-and-forget) or Blocking (wait for upload). */
-export type VssBackupMode = 'Async' | 'Blocking';
-
 /**
- * VSS backup configuration for cloud backup.
- * serverUrl, storeId and signingKey are required; other fields are optional.
+ * VSS backup identity — the three values every backup call needs.
+ *
+ * Encryption is always on (client-side, in the runtime) and the backup
+ * schedule is the SDK's own concern, so neither is a parameter here.
  */
 export interface VssBackupConfig {
   serverUrl: string;
   storeId: string;
   /** Signing key as a hex-encoded 32-byte secret key string. */
   signingKey: string;
-  encryptionEnabled?: boolean;
-  autoBackup?: boolean;
-  backupMode?: VssBackupMode;
 }
 
 /** Information about the current VSS backup status for a wallet. */
@@ -101,7 +87,6 @@ export interface IssueAssetIfaRequestModel {
   precision: number;
   amounts: number[];
   inflationAmounts: number[];
-  replaceRightsNum: number;
   rejectListUrl: string | null;
 }
 
@@ -165,10 +150,6 @@ export interface SendBtcBeginRequestModel {
 export interface SendBtcEndRequestModel {
   signedPsbt: string;
   skipSync?: boolean;
-}
-
-export interface GetFeeEstimationRequestModel {
-  blocks: number;
 }
 
 /** Canonical fee-estimation result. */
@@ -424,10 +405,6 @@ export type ListAssets = {
   cfa: AssetCFA[];
   ifa: AssetIfa[];
 };
-
-export interface IssueAssetNIAResponse {
-  asset?: AssetNIA;
-}
 
 export interface AssetBalance {
   settled?: number;

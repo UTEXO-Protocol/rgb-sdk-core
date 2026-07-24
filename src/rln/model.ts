@@ -40,6 +40,17 @@ export interface LightningChannel {
   virtualOpenMode?: string;
 }
 
+/**
+ * What **both** platforms honour when opening a channel.
+ *
+ * The wasm node's `openChannel` takes exactly these. `push_msat`,
+ * `with_anchors`, the fee overrides, `temporary_channel_id` and
+ * `push_asset_amount` have no argument to be passed in, and `virtual_open_mode`
+ * is a node-wide setting on web (`enableVirtualChannels` at init) rather than a
+ * per-channel one — so declaring any of them shared would be a §2.5 violation:
+ * web accepted them and silently dropped them. rn widens this type locally with
+ * its own extras, the way platform-specific surface is always handled (§6.0).
+ */
 export interface OpenChannelParams {
   /** Peer pubkey, optionally `pubkey@host:port` when the peer is not connected. */
   peerPubkey: string;
@@ -47,16 +58,6 @@ export interface OpenChannelParams {
   isPublic: boolean;
   assetId?: string;
   assetLocalAmount?: number | bigint;
-  /** Sats pushed to the peer at open. Default 0. */
-  pushMsat?: number | bigint;
-  /** Open an anchor-outputs channel. Default true. */
-  withAnchors?: boolean;
-  feeBaseMsat?: number | null;
-  feeProportionalMillionths?: number | null;
-  /** Caller-supplied temporary channel id (advanced). */
-  temporaryChannelId?: string | null;
-  pushAssetAmount?: number | bigint | null;
-  virtualOpenMode?: string | null;
 }
 
 export interface OpenChannelResult {

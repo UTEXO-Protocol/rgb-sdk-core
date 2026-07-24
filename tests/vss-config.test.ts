@@ -9,7 +9,7 @@ const MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
 describe('buildVssConfigFromMnemonic', () => {
-  it('builds a config with the given server url and Blocking backup mode', async () => {
+  it('builds a config carrying exactly the VSS identity', async () => {
     const config = await buildVssConfigFromMnemonic(
       MNEMONIC,
       DEFAULT_VSS_SERVER_URL,
@@ -17,9 +17,15 @@ describe('buildVssConfigFromMnemonic', () => {
     );
 
     expect(config.serverUrl).toBe(DEFAULT_VSS_SERVER_URL);
-    expect(config.backupMode).toBe('Blocking');
     expect(typeof config.signingKey).toBe('string');
     expect(config.signingKey.length).toBeGreaterThan(0);
+    // serverUrl + storeId + signingKey and nothing else: encryption is always
+    // on in the runtime and the schedule is the SDK's own concern (§6.0r).
+    expect(Object.keys(config).sort()).toEqual([
+      'serverUrl',
+      'signingKey',
+      'storeId',
+    ]);
   });
 
   it('derives storeId as wallet_<masterFingerprint>', async () => {

@@ -23,7 +23,6 @@ export type { IWalletLifecycle } from './IWalletLifecycle';
 export type {
   IPsbtSigning,
   IBeginEndFlows,
-  IVssBackup,
   WalletCapabilities,
 } from './optional-groups';
 

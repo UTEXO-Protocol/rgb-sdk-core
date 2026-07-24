@@ -39,7 +39,6 @@ import type { IWalletLifecycle } from './IWalletLifecycle';
 import type {
   IBeginEndFlows,
   IPsbtSigning,
-  IVssBackup,
   WalletCapabilities,
 } from './optional-groups';
 
@@ -80,8 +79,8 @@ export interface IUTEXOWalletCore
 
   /**
    * **Local**, file-path backup — implemented on both (rn `rlnBackup`, web
-   * `manager.createBackup`). Not VSS: that is remote replication and lives on
-   * the `vss` carrier. Grouping the two was a first-draft error.
+   * `manager.createBackup`). Distinct from `backupNow()`, which replicates to
+   * the remote store.
    */
   createBackup(params: {
     backupPath: string;
@@ -97,6 +96,18 @@ export interface IUTEXOWalletCore
    * costs web nothing — it already ignores the value.
    */
   vssClearFence(password: string): Promise<void>;
+
+  /**
+   * Replicate wallet state to the remote store now; returns the new backup
+   * version.
+   *
+   * Intent, not mechanism (§2.7): each platform covers however many state
+   * stores it has. web uploads its rgb-lib wallet snapshot (the node stream
+   * replicates continuously on its own); rn's node backs up its single store.
+   * Both platforms also back up automatically — this is the "don't wait for
+   * the next state change" call.
+   */
+  backupNow(): Promise<number>;
 }
 
 /**
@@ -107,8 +118,6 @@ export interface IUTEXOWalletCore
  *
  * @example Consuming optional groups
  * ```ts
- * await wallet.vss?.vssBackup();            // no-op where unsupported
- *
  * if (!wallet.psbt) {
  *   throw new Error('PSBT signing unavailable on this platform');
  * }
@@ -125,10 +134,4 @@ export interface IUTEXOWallet<TUnlockParams = void>
 
   /** Present only where the platform exposes externally-signed flows (web). */
   readonly beginEnd?: IBeginEndFlows;
-
-  /**
-   * Present only where imperative VSS replication is exposed (web).
-   * @deprecated Temporary — reshape to intent-based backup (§2.7).
-   */
-  readonly vss?: IVssBackup;
 }

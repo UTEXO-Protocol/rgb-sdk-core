@@ -41,6 +41,5 @@ export async function buildVssConfigFromMnemonic(
     serverUrl,
     storeId: `wallet_${keys.masterFingerprint}`,
     signingKey: deriveVssSigningKeyFromMnemonic(mnemonic.trim()),
-    backupMode: 'Blocking',
   };
 }

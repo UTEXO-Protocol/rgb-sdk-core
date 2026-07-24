@@ -73,7 +73,6 @@ export type {
   IWalletLifecycle,
   IPsbtSigning,
   IBeginEndFlows,
-  IVssBackup,
   WalletCapabilities,
   IUTEXOWalletCore,
   IUTEXOWallet,
