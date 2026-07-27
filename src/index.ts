@@ -54,6 +54,13 @@ export {
   UMA_MAX_USERNAME_LENGTH,
 } from './utils/lightning-address';
 export type { ParsedLightningAddress } from './utils/lightning-address';
+export {
+  LOOPBACK_HOSTS,
+  hostnameOf,
+  isLoopbackHost,
+  isSameLspHost,
+  lnurlDiscoveryUrl,
+} from './utils/hosts';
 export { toUnitsNumber, fromUnitsNumber } from './utils/units';
 export { calculateMasterFingerprint } from './utils/fingerprint';
 export {

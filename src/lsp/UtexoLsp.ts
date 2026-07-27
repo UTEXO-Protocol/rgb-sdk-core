@@ -15,6 +15,7 @@
 
 import { UtexoLSPClient } from './UtexoLSPClient';
 import { parseLightningAddress } from '../utils/lightning-address';
+import { isSameLspHost, lnurlDiscoveryUrl } from '../utils/hosts';
 import type { IUtexoLSPClient } from './IUtexoLSPClient';
 import type { ILspWallet } from './ILspWallet';
 import type { LightningSendRequest } from '../types/wallet-model';
@@ -348,9 +349,16 @@ export class UtexoLsp {
   /**
    * Resolve a Lightning Address and pay it.
    *
-   * Tries this LSP's `resolveAddress` first (which also handles host rewriting,
-   * e.g. the Android emulator's `10.0.2.2`), then falls back to standard LNURL
-   * discovery for addresses hosted elsewhere.
+   * Discovery is routed by the address's own domain:
+   *   - hosted on this LSP → `resolveAddress`, which carries our bearer token,
+   *     timeouts and host rewriting (e.g. the Android emulator's `10.0.2.2`)
+   *   - hosted anywhere else → plain LNURL discovery against that domain, with
+   *     no LSP credentials attached
+   *
+   * Routing on the domain rather than trying the LSP first is deliberate: the
+   * LSP answers `/.well-known/lnurlp/<username>` for its *own* users, so asking
+   * it about a foreign address returns a valid invoice for the wrong person
+   * whenever the usernames happen to collide.
    */
   async payAddress(
     opts: PayAddressOptions
@@ -369,36 +377,37 @@ export class UtexoLsp {
 
     let invoice: string | undefined;
 
-    // LNURL resolution is an idempotent GET; a freshly (re)started LSP can 404
-    // for a beat while its cron provisions the address account. Retry before
-    // falling back.
-    let resolveErr: unknown;
-    for (let attempt = 1; attempt <= 3 && !invoice; attempt++) {
-      try {
-        const cb = await this.http.resolveAddress(
-          username,
-          opts.amtMsat,
-          opts.asset?.assetId,
-          assetAmount
-        );
-        invoice = cb.pr;
-      } catch (err) {
-        resolveErr = err;
-        await new Promise((r) => setTimeout(r, 2000));
+    if (isSameLspHost(domain, this.peer.baseUrl)) {
+      // LNURL resolution is an idempotent GET; a freshly (re)started LSP can
+      // 404 for a beat while its cron provisions the address account, so retry
+      // before giving up. There is no second source for a local address —
+      // surface the real error rather than a misleading fetch failure.
+      let resolveErr: unknown;
+      for (let attempt = 1; attempt <= 3 && !invoice; attempt++) {
+        try {
+          const cb = await this.http.resolveAddress(
+            username,
+            opts.amtMsat,
+            opts.asset?.assetId,
+            assetAmount
+          );
+          invoice = cb.pr;
+        } catch (err) {
+          resolveErr = err;
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 2000));
+        }
       }
-    }
-
-    if (!invoice) {
-      // A local host can only be this LSP — there is no public LNURL endpoint
-      // to fall back to, so surface the real error instead of a fetch failure.
-      if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/.test(domain)) {
+      if (!invoice) {
         throw resolveErr instanceof Error
           ? resolveErr
           : new Error(String(resolveErr));
       }
-      const meta = (await fetch(
-        `https://${domain}/.well-known/lnurlp/${encodeURIComponent(username)}`
-      ).then((r) => r.json())) as { callback: string };
+    } else {
+      // Foreign host: plain LNURL, no LSP credentials. The callback it returns
+      // is absolute and belongs to that host, so it is used as-is.
+      const meta = (await fetch(lnurlDiscoveryUrl(domain, username)).then((r) =>
+        r.json()
+      )) as { callback: string };
       if (!meta?.callback)
         throw new Error('Missing callback in LNURL response');
 

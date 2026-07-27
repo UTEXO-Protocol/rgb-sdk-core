@@ -188,9 +188,15 @@ export class UtexoLSPClient implements IUtexoLSPClient {
   }
 
   /**
-   * Full LUD-06 resolution: discovers the callback URL from LNURL metadata,
-   * then fetches the BOLT11 invoice. Works for any Lightning Address host, not
-   * just utexo-lsp.
+   * Full LUD-06 resolution against **this LSP only**: discovers the callback
+   * from `<baseUrl>/.well-known/lnurlp/<username>`, then fetches the BOLT11
+   * invoice. `rewriteCallbackUrl` rebases the advertised callback onto
+   * `baseUrl` so both hops keep this client's auth, timeouts and host
+   * rewriting.
+   *
+   * It therefore cannot resolve an address hosted elsewhere — passing a foreign
+   * username asks our LSP about its own user of that name. Callers must route
+   * on the address domain first (see `UtexoLsp.payAddress`).
    */
   async resolveAddress(
     username: string,
