@@ -55,73 +55,39 @@ export {
 } from './utils/bip32-helpers';
 
 // Interfaces
-export type {
-  WalletInitParams,
-  IWalletManager,
-} from './interfaces/IWalletManager';
 export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
+
+// The UTEXO protocol contract — domain groups + optional carriers.
 export type {
-  ILightningProtocol,
-  IOnchainProtocol,
+  ILightningNode,
+  ILightningPayments,
+  CreateLnInvoiceRequest,
+  IAsyncPayments,
+  IOnchainTransfers,
+  IRgbAssets,
+  InflateResult,
+  IBitcoinWallet,
+  IWalletLifecycle,
+  IPsbtSigning,
+  IBeginEndFlows,
+  WalletCapabilities,
+  IUTEXOProtocolCore,
   IUTEXOProtocol,
-} from './interfaces/IUTEXOProtocol';
+  UTEXOWalletCreateParams,
+} from './interfaces/wallet';
 
-// BaseWalletManager abstract class
-export { BaseWalletManager } from './wallet/BaseWalletManager';
-
-// UTEXOWalletCore abstract class
-export { UTEXOWalletCore } from './utexo/UTEXOWalletCore';
-
-// UTEXO Protocol base classes
-export {
-  LightningProtocol,
-  OnchainProtocol,
-  UTEXOProtocol,
-} from './utexo/utexo-protocol';
-
-// UTEXO network config
-export {
-  getUtxoNetworkConfig,
-  utexoNetworkMap,
-  utexoNetworkIdMap,
-  getDestinationAsset,
-} from './utexo/utils/network';
-export type {
-  UtxoNetworkPreset,
-  UtxoNetworkMap,
-  UtxoNetworkIdMap,
-  UtxoNetworkPresetConfig,
-  NetworkAsset,
-  UtxoNetworkId,
-} from './utexo/utils/network';
-export { testnetPreset, mainnetPreset } from './utexo/config/utexo-presets';
-export { DEFAULT_GATEWAY_BASE_URLS } from './utexo/config/gateway';
+// VSS defaults
 export { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './utexo/config/vss';
-export type { ConfigOptions } from './utexo/config/options';
 
-// Bridge client
-export {
-  getBridgeAPI,
-  encodeTransferStatus,
-  FetchClient,
-} from './utexo/bridge/api';
-export type {
-  NetworkAddress,
-  TransferType,
-  Estimation,
-  BridgeInSignatureRequest,
-  BridgeInSignatureResponse,
-  SubmitTransactionRequest,
-  SubmitTransactionResponse,
-  VerifyBridgeInRequest,
-  ReceiverInvoiceResponse,
-  TokenInfo,
-  TransactionHash,
-  TransferByMainnetInvoiceResponse,
-  ApiError,
-} from './utexo/bridge/types';
-export { TransferStatuses } from './utexo/bridge/types';
+// HTTP transport (injectable; used by core clients such as the LSP client)
+export { FetchClient } from './utils/fetch-client';
+
+// RLN — Lightning domain types, canonical statuses, wire-mapping contract
+export * from './rln';
+
+// utexo-lsp — client, composed flows, types, errors
+export * from './lsp';
 
 // Crypto — VSS key derivation
 export { deriveVssSigningKeyFromMnemonic } from './crypto/vss-keys';
@@ -133,11 +99,9 @@ export type { SignMessageParams, VerifyMessageParams } from './crypto/message';
 // Crypto — PSBT utilities (pure, no platform deps)
 export { detectPsbtType, deriveDescriptors } from './crypto/psbt';
 
-// UTEXO helpers
-export { decodeBridgeInvoice } from './utexo/utils/helpers';
-
 // UTEXO restore helpers (pure, no fs)
 export { buildVssConfigFromMnemonic, getBackupStoreId } from './utexo/restore';
+export type { UtxoNetworkPreset } from './utexo/restore';
 
 // Crypto — key derivation (pure @scure/*, works in Node, RN, and Web)
 export {
@@ -160,4 +124,5 @@ export {
   deriveKeysFromXpriv,
   accountDerivationPath,
   normalizeSeedInput,
+  seedFromMnemonic,
 } from './crypto/keys';

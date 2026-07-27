@@ -9,8 +9,13 @@
 
 import { deriveKeysFromMnemonic } from '../crypto/keys';
 import { deriveVssSigningKeyFromMnemonic } from '../crypto/vss-keys';
-import type { UtxoNetworkPreset } from './utils/network';
 import type { VssBackupConfig } from '../types/wallet-model';
+
+/**
+ * Which key-derivation bundle to use. Endpoint resolution happens through
+ * `DEFAULT_RLN_URLS` (web) and `network-defaults.ts` (rn).
+ */
+export type UtxoNetworkPreset = 'mainnet' | 'testnet';
 
 /** Store id for backup/restore (same convention as VSS: wallet_<masterFingerprint>). */
 export function getBackupStoreId(masterFingerprint: string): string {
@@ -32,6 +37,5 @@ export async function buildVssConfigFromMnemonic(
     serverUrl,
     storeId: `wallet_${keys.masterFingerprint}`,
     signingKey: deriveVssSigningKeyFromMnemonic(mnemonic.trim()),
-    backupMode: 'Blocking',
   };
 }

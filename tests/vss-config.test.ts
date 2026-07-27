@@ -1,0 +1,92 @@
+import {
+  buildVssConfigFromMnemonic,
+  getBackupStoreId,
+  deriveKeysFromMnemonic,
+  DEFAULT_VSS_SERVER_URL,
+} from '../dist/index.mjs';
+
+const MNEMONIC =
+  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+describe('buildVssConfigFromMnemonic', () => {
+  it('builds a config carrying exactly the VSS identity', async () => {
+    const config = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL,
+      'mainnet'
+    );
+
+    expect(config.serverUrl).toBe(DEFAULT_VSS_SERVER_URL);
+    expect(typeof config.signingKey).toBe('string');
+    expect(config.signingKey.length).toBeGreaterThan(0);
+    // serverUrl + storeId + signingKey and nothing else: encryption is always
+    // on in the runtime and the schedule is the SDK's own concern (§6.0r).
+    expect(Object.keys(config).sort()).toEqual([
+      'serverUrl',
+      'signingKey',
+      'storeId',
+    ]);
+  });
+
+  it('derives storeId as wallet_<masterFingerprint>', async () => {
+    const keys = await deriveKeysFromMnemonic('mainnet', MNEMONIC);
+    const config = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL,
+      'mainnet'
+    );
+
+    expect(config.storeId).toBe(`wallet_${keys.masterFingerprint}`);
+    expect(config.storeId).toBe(getBackupStoreId(keys.masterFingerprint));
+  });
+
+  it('is deterministic for the same mnemonic and network', async () => {
+    const a = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL,
+      'mainnet'
+    );
+    const b = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL,
+      'mainnet'
+    );
+
+    expect(a).toEqual(b);
+  });
+
+  it('trims surrounding whitespace in the mnemonic', async () => {
+    const clean = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL,
+      'mainnet'
+    );
+    const padded = await buildVssConfigFromMnemonic(
+      `  ${MNEMONIC}  `,
+      DEFAULT_VSS_SERVER_URL,
+      'mainnet'
+    );
+
+    expect(padded).toEqual(clean);
+  });
+
+  it('defaults to the testnet preset when none is given', async () => {
+    const implicit = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL
+    );
+    const explicit = await buildVssConfigFromMnemonic(
+      MNEMONIC,
+      DEFAULT_VSS_SERVER_URL,
+      'testnet'
+    );
+
+    expect(implicit).toEqual(explicit);
+  });
+});
+
+describe('getBackupStoreId', () => {
+  it('prefixes the master fingerprint with wallet_', () => {
+    expect(getBackupStoreId('abcd1234')).toBe('wallet_abcd1234');
+  });
+});
