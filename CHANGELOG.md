@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.0.0-beta.6
+
+### Added
+
+- **UMA addresses accepted everywhere a Lightning Address is** — `payAddress`
+  takes both `bob@x.com` and UMA's `$bob@x.com`; per UMAD-01 the two are the
+  same address once the `$` is stripped. New helpers
+  `normalizeLightningAddress`, `isUmaAddress`, `parseLightningAddress` (plus
+  `UMA_PREFIX`, `UMA_MAX_USERNAME_LENGTH`, type `ParsedLightningAddress`).
+  UMA's stricter username rules apply only to `$` addresses, so plain addresses
+  behave exactly as before. This is address-format compatibility, **not** UMA
+  protocol support.
+- **Host helpers** (`src/utils/hosts.ts`) — `LOOPBACK_HOSTS`, `hostnameOf`,
+  `isLoopbackHost`, `isSameLspHost`, `lnurlDiscoveryUrl`. Mirrors the loopback
+  set in `wdk-rgb-lightning` and covers `::1` and the Android emulator's
+  `10.0.2.2`, which the previous ad-hoc check missed.
+
+### Fixed
+
+- **`payAddress` could pay the wrong recipient** — LNURL discovery ran against
+  the configured LSP for *every* address, so a foreign address whose username
+  collided with one of our own users returned that user's invoice. Discovery is
+  now routed by the address's own domain: the LSP client for our addresses,
+  plain LNURL (with no LSP credentials attached) for everyone else. Also removes
+  ~6s of doomed retries before the foreign path is taken.
+- `resolveAddress` documented as LSP-only; it never could resolve addresses
+  hosted elsewhere, despite the previous docstring claiming otherwise.
+
 ## 1.0.0-beta.5
 
 ### Breaking
