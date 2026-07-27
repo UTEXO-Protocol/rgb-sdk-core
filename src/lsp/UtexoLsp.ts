@@ -14,6 +14,7 @@
  */
 
 import { UtexoLSPClient } from './UtexoLSPClient';
+import { parseLightningAddress } from '../utils/lightning-address';
 import type { IUtexoLSPClient } from './IUtexoLSPClient';
 import type { ILspWallet } from './ILspWallet';
 import type { LightningSendRequest } from '../types/wallet-model';
@@ -87,7 +88,10 @@ export interface SendAssetResult extends LspOnchainSendResponse {
 // ── payAddress ────────────────────────────────────────────────────────────────
 
 export interface PayAddressOptions {
-  /** Lightning Address, e.g. `alice@lsp.utexo.com`. */
+  /**
+   * Lightning Address, e.g. `alice@lsp.utexo.com`. UMA's `$alice@lsp.utexo.com`
+   * form is accepted too — the `$` is stripped before LNURL discovery.
+   */
   address: string;
   amtMsat: number;
   asset?: LightningAssetParam;
@@ -351,9 +355,9 @@ export class UtexoLsp {
   async payAddress(
     opts: PayAddressOptions
   ): Promise<{ invoice: string; sendResult: LightningSendRequest }> {
-    const [username, domain] = opts.address.split('@');
-    if (!username || !domain)
-      throw new Error(`Invalid Lightning Address: "${opts.address}"`);
+    // Accepts both plain Lightning Addresses and UMA's `$user@host` form
+    // (UMAD-01) — the `$` is stripped before LNURL discovery.
+    const { username, domain } = parseLightningAddress(opts.address);
 
     const assetAmount = opts.asset
       ? (opts.asset.assetAmount ?? opts.asset.amount)

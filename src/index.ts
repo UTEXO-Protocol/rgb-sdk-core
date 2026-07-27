@@ -46,6 +46,14 @@ export {
   validateString,
 } from './utils/validation';
 export { isNetwork } from './utils/network';
+export {
+  isUmaAddress,
+  normalizeLightningAddress,
+  parseLightningAddress,
+  UMA_PREFIX,
+  UMA_MAX_USERNAME_LENGTH,
+} from './utils/lightning-address';
+export type { ParsedLightningAddress } from './utils/lightning-address';
 export { toUnitsNumber, fromUnitsNumber } from './utils/units';
 export { calculateMasterFingerprint } from './utils/fingerprint';
 export {
