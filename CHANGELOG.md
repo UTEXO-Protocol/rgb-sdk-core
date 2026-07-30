@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-beta.7
+
+### Added
+
+- **LNURL-pay amount validation** — `assertValidAmtMsat`,
+  `assertAmtMsatInSendableRange`, `LspAmountOutOfRangeError`, discovery type
+  `LspLnurlpDiscovery`, and `DEFAULT_LSP_MIN_AMT_MSAT` (documents utexo-lsp's
+  3_000_000 floor). `payAddress` / `resolveAddress` check discovery
+  `minSendable`/`maxSendable` before `/pay/callback`, so amounts like `1000`
+  fail with a clear range error instead of an opaque LSP 400.
+
 ## 1.0.0-beta.6
 
 ### Added

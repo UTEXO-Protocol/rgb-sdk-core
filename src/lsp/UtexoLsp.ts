@@ -30,14 +30,21 @@ import {
   type ChannelReadyInfo,
   type LspOnchainSendResponse,
   type LspLnParams,
+  type LspLnurlpDiscovery,
   type ReceiveSettlementOutcome,
   peerUri,
 } from './lsp-types';
 import {
+  LspAmountOutOfRangeError,
   LspChannelTimeoutError,
   LspLiquidityTimeoutError,
   LspSettlementError,
 } from './LspErrors';
+import {
+  assertAmtMsatInSendableRange,
+  assertValidAmtMsat,
+} from './lnurlp-amount';
+import { ValidationError } from '../errors';
 
 // ── Shared wait options ───────────────────────────────────────────────────────
 
@@ -365,6 +372,7 @@ export class UtexoLsp {
   ): Promise<{ invoice: string; sendResult: LightningSendRequest }> {
     // Accepts both plain Lightning Addresses and UMA's `$user@host` form
     // (UMAD-01) — the `$` is stripped before LNURL discovery.
+    assertValidAmtMsat(opts.amtMsat);
     const { username, domain } = parseLightningAddress(opts.address);
 
     const assetAmount = opts.asset
@@ -382,6 +390,7 @@ export class UtexoLsp {
       // 404 for a beat while its cron provisions the address account, so retry
       // before giving up. There is no second source for a local address —
       // surface the real error rather than a misleading fetch failure.
+      // Amount / validation errors are client-side and must not be retried.
       let resolveErr: unknown;
       for (let attempt = 1; attempt <= 3 && !invoice; attempt++) {
         try {
@@ -394,6 +403,12 @@ export class UtexoLsp {
           invoice = cb.pr;
         } catch (err) {
           resolveErr = err;
+          if (
+            err instanceof LspAmountOutOfRangeError ||
+            err instanceof ValidationError
+          ) {
+            break;
+          }
           if (attempt < 3) await new Promise((r) => setTimeout(r, 2000));
         }
       }
@@ -407,9 +422,15 @@ export class UtexoLsp {
       // is absolute and belongs to that host, so it is used as-is.
       const meta = (await fetch(lnurlDiscoveryUrl(domain, username)).then((r) =>
         r.json()
-      )) as { callback: string };
+      )) as LspLnurlpDiscovery;
       if (!meta?.callback)
         throw new Error('Missing callback in LNURL response');
+
+      assertAmtMsatInSendableRange(
+        opts.amtMsat,
+        meta.minSendable,
+        meta.maxSendable
+      );
 
       let url = `${meta.callback}${meta.callback.includes('?') ? '&' : '?'}amount=${opts.amtMsat}`;
       if (opts.asset?.assetId)

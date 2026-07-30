@@ -13,9 +13,14 @@ import type {
   LspLightningAddressByPubkeyWire,
   LspLnurlpCallbackResponse,
   LspLnurlpCallbackWire,
+  LspLnurlpDiscovery,
   LspApayInvoiceProofWire,
   ApayInvoiceProof,
 } from './lsp-types';
+import {
+  assertAmtMsatInSendableRange,
+  assertValidAmtMsat,
+} from './lnurlp-amount';
 
 /**
  * Map the snake_case wire proof (utexo-lsp) to the camelCase SDK shape.
@@ -204,7 +209,8 @@ export class UtexoLSPClient implements IUtexoLSPClient {
     assetId?: string,
     assetAmount?: number
   ): Promise<LspLnurlpCallbackResponse> {
-    const meta = await this.request<{ callback: string }>(
+    assertValidAmtMsat(amtMsat);
+    const meta = await this.request<LspLnurlpDiscovery>(
       `/.well-known/lnurlp/${encodeURIComponent(username)}`
     );
     if (!meta?.callback) {
@@ -214,6 +220,7 @@ export class UtexoLSPClient implements IUtexoLSPClient {
         'missing callback in LNURL response'
       );
     }
+    assertAmtMsatInSendableRange(amtMsat, meta.minSendable, meta.maxSendable);
     const sep = meta.callback.includes('?') ? '&' : '?';
     let url = `${this.rewriteCallbackUrl(meta.callback)}${sep}amount=${amtMsat}`;
     if (assetId) url += `&asset_id=${encodeURIComponent(assetId)}`;
@@ -239,6 +246,7 @@ export class UtexoLSPClient implements IUtexoLSPClient {
     assetId?: string,
     assetAmount?: number
   ): Promise<LspLnurlpCallbackResponse> {
+    assertValidAmtMsat(amtMsat);
     let path = `/pay/callback/${encodeURIComponent(username)}?amount=${amtMsat}`;
     if (assetId) path += `&asset_id=${encodeURIComponent(assetId)}`;
     if (assetAmount !== undefined) path += `&asset_amount=${assetAmount}`;
