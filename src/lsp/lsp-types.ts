@@ -107,6 +107,18 @@ export interface LspApayInvoiceProofWire {
   expires_at: number;
 }
 
+/**
+ * LUD-06 LNURL-pay discovery (`/.well-known/lnurlp/{username}`).
+ *
+ * `minSendable` / `maxSendable` are millisatoshis — utexo-lsp defaults both to
+ * `DEFAULT_LSP_MIN_AMT_MSAT` (3_000_000) unless env overrides.
+ */
+export interface LspLnurlpDiscovery {
+  callback: string;
+  minSendable: number;
+  maxSendable: number;
+}
+
 /** Wire shape of the LNURL-pay callback (snake_case `proof`). */
 export interface LspLnurlpCallbackWire {
   pr: string;

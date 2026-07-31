@@ -1,5 +1,9 @@
 import { jest } from '@jest/globals';
-import { UtexoLsp } from '../dist/index.mjs';
+import {
+  UtexoLsp,
+  LspAmountOutOfRangeError,
+  DEFAULT_LSP_MIN_AMT_MSAT,
+} from '../dist/index.mjs';
 
 const PEER = {
   baseUrl: 'https://lsp.example',
@@ -15,11 +19,18 @@ function makeWallet() {
 }
 
 /** Two-hop LNURL: discovery returns a callback, callback returns the invoice. */
-function makeFetch(invoice = 'lnbc-from-foreign-host') {
+function makeFetch(
+  invoice = 'lnbc-from-foreign-host',
+  range = { minSendable: 1000, maxSendable: 10_000_000 }
+) {
   return jest.fn(async (url: any) => ({
     json: async () =>
       String(url).includes('/.well-known/lnurlp/')
-        ? { callback: 'https://other.com/pay/callback/alice' }
+        ? {
+            callback: 'https://other.com/pay/callback/alice',
+            minSendable: range.minSendable,
+            maxSendable: range.maxSendable,
+          }
         : { pr: invoice },
   })) as any;
 }
@@ -140,4 +151,29 @@ describe('payAddress routes discovery by the address domain', () => {
     ).rejects.toThrow('404 no such account');
     expect(global.fetch).not.toHaveBeenCalled();
   }, 15000);
+
+  it('rejects amounts outside discovery minSendable/maxSendable on the foreign path', async () => {
+    const lsp = makeLsp();
+    global.fetch = makeFetch('lnbc', {
+      minSendable: DEFAULT_LSP_MIN_AMT_MSAT,
+      maxSendable: DEFAULT_LSP_MIN_AMT_MSAT,
+    });
+
+    await expect(
+      lsp.payAddress({ address: 'alice@other.com', amtMsat: 1000 })
+    ).rejects.toThrow(LspAmountOutOfRangeError);
+    // Discovery only — never hits the callback with a doomed amount.
+    expect((global.fetch as any).mock.calls).toHaveLength(1);
+  });
+
+  it('rejects invalid amtMsat before any network call', async () => {
+    const lsp = makeLsp();
+    global.fetch = makeFetch();
+
+    await expect(
+      lsp.payAddress({ address: 'alice@lsp.example', amtMsat: 0 })
+    ).rejects.toThrow(/finite positive integer/);
+    expect(lsp.http.resolveAddress).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
