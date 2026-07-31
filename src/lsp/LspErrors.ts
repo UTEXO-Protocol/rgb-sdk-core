@@ -51,23 +51,3 @@ export class LspSettlementError extends Error {
     super(`Settlement ended with status "${status}" at step ${step}`);
   }
 }
-
-/**
- * LNURL-pay amount is outside the discovery-advertised sendable range.
- *
- * Thrown client-side before `/pay/callback` so callers get a clear range
- * instead of utexo-lsp's opaque `amount is out of acceptable range` 400.
- */
-export class LspAmountOutOfRangeError extends Error {
-  readonly name = 'LspAmountOutOfRangeError';
-  constructor(
-    public readonly amtMsat: number,
-    public readonly minSendable: number,
-    public readonly maxSendable: number
-  ) {
-    super(
-      `amount ${amtMsat} msat is outside LNURL sendable range ` +
-        `[${minSendable}, ${maxSendable}]`
-    );
-  }
-}

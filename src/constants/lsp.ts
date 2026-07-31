@@ -20,15 +20,6 @@ export const DEFAULT_LSP_BASE_URLS: Partial<Record<Network, string>> = {
   utexo: 'https://lsp-signet.utexo.com',
 };
 
-/**
- * Default utexo-lsp `MIN_AMT_MSAT` / Lightning Address `minSendable`.
- *
- * Documents the stock LSP floor (3_000_000 msat = 3_000 sats). Runtime
- * validation must still use discovery's `minSendable` / `maxSendable` — an
- * operator may override the env vars.
- */
-export const DEFAULT_LSP_MIN_AMT_MSAT = 3_000_000;
-
 /** The default LSP base URL for a network, or `undefined` if none exists. */
 export function getDefaultLspBaseUrl(network: string): string | undefined {
   return (DEFAULT_LSP_BASE_URLS as Record<string, string | undefined>)[network];

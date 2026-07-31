@@ -22,16 +22,10 @@ export type {
 } from './UtexoLsp';
 
 export {
-  LspAmountOutOfRangeError,
   LspChannelTimeoutError,
   LspLiquidityTimeoutError,
   LspSettlementError,
 } from './LspErrors';
-
-export {
-  assertValidAmtMsat,
-  assertAmtMsatInSendableRange,
-} from './lnurlp-amount';
 
 export { peerUri, normalizeReceiveStatus } from './lsp-types';
 export type {
@@ -46,7 +40,6 @@ export type {
   LspLightningReceiveRequest,
   LspLightningReceiveResponse,
   LspLightningReceiveWire,
-  LspLnurlpDiscovery,
   LspLnurlpCallbackResponse,
   LspLnurlpCallbackWire,
   LspLightningAddressByPubkeyResponse,
