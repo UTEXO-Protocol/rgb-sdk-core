@@ -10,6 +10,8 @@
  * live in `../rln/model` — re-exported below for import-site compatibility.
  */
 
+import type { AssetSchema } from '../types/wallet-model';
+
 export type { ApayHashEntry, ApayNewResponse } from '../rln/model';
 
 // ── LSP client config ─────────────────────────────────────────────────────────
@@ -22,19 +24,69 @@ export interface LspClientConfig {
 
 // ── LSP HTTP response / request DTOs ─────────────────────────────────────────
 
-export interface LspGetInfoResponse {
-  pubkey: string;
-  alias?: string;
-  numChannels: number;
-  numUsableChannels: number;
+/** One entry of `get_info.supported_assets`. */
+export interface LspSupportedAsset {
+  assetId: string;
+  /** Check it before transacting: `Ifa` is unavailable on mainnet. */
+  schema: AssetSchema;
+  ticker?: string;
+  name: string;
+  precision: number;
 }
 
-/** Raw wire shape returned by utexo-lsp (snake_case keys). */
-export interface LspGetInfoWire {
+/**
+ * utexo-lsp discovery document (`GET /get_info`, api_version 1). Amounts are
+ * `bigint`: the wire sends u64 as strings, and `Number` corrupts them above
+ * 2^53. Additive-only contract — ignore fields you do not recognize.
+ */
+export interface LspGetInfoResponse {
+  apiVersion: number;
   pubkey: string;
-  alias?: string;
-  num_channels: number;
-  num_usable_channels: number;
+  network: string;
+  /** P2P host and port. With `pubkey` they form the `connectPeer()` URI. */
+  host?: string;
+  port?: number;
+  supportedAssets: LspSupportedAsset[];
+  minPaymentSizeMsat: bigint;
+  /** Static policy, not live capacity — an existing channel may deliver more. */
+  maxPaymentSizeMsat: bigint;
+  minChannelBalanceSat: bigint;
+  maxChannelBalanceSat: bigint;
+  minInitialClientBalanceMsat: bigint;
+  maxInitialClientBalanceMsat: bigint;
+  minChannelAssetAmount: bigint;
+  maxChannelAssetAmount: bigint;
+  virtualChannelMode?: string;
+  /** UI hint only — LNURL stays authoritative once an address is known. */
+  lightningAddressMinSendableMsat: bigint;
+  lightningAddressMaxSendableMsat: bigint;
+}
+
+/** Raw wire shape returned by utexo-lsp (snake_case keys, u64 as strings). */
+export interface LspGetInfoWire {
+  api_version: number;
+  pubkey: string;
+  network: string;
+  host?: string;
+  port?: number;
+  supported_assets: {
+    asset_id: string;
+    schema: AssetSchema;
+    ticker?: string;
+    name: string;
+    precision: number;
+  }[];
+  min_payment_size_msat: string;
+  max_payment_size_msat: string;
+  min_channel_balance_sat: string;
+  max_channel_balance_sat: string;
+  min_initial_client_balance_msat: string;
+  max_initial_client_balance_msat: string;
+  min_channel_asset_amount: string;
+  max_channel_asset_amount: string;
+  virtual_channel_mode?: string;
+  lightning_address_min_sendable_msat: string;
+  lightning_address_max_sendable_msat: string;
 }
 
 export interface LspLnParams {

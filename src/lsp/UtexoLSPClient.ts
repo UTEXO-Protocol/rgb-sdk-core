@@ -69,6 +69,22 @@ export class LspError extends Error {
   }
 }
 
+/**
+ * utexo-lsp sends u64 as decimal strings. Surface a malformed one as an
+ * `LspError`, not as a bare `SyntaxError` from `BigInt()`.
+ */
+function toBigInt(value: string | undefined, field: string): bigint {
+  try {
+    return BigInt(value ?? '');
+  } catch {
+    throw new LspError(
+      '/get_info',
+      200,
+      `field ${field} is not a u64 string: ${String(value)}`
+    );
+  }
+}
+
 function snakeCaseLnParams(
   ln: LspOnchainSendRequest['ln']
 ): Record<string, unknown> {
@@ -184,11 +200,36 @@ export class UtexoLSPClient implements IUtexoLSPClient {
 
   async getInfo(): Promise<LspGetInfoResponse> {
     const raw = await this.request<LspGetInfoWire>('/get_info');
+    const u64 = (key: keyof LspGetInfoWire & string): bigint =>
+      toBigInt(raw[key] as string | undefined, key);
     return {
+      apiVersion: raw.api_version,
       pubkey: raw.pubkey,
-      alias: raw.alias,
-      numChannels: raw.num_channels,
-      numUsableChannels: raw.num_usable_channels,
+      network: raw.network,
+      host: raw.host,
+      port: raw.port,
+      supportedAssets: (raw.supported_assets ?? []).map((a) => ({
+        assetId: a.asset_id,
+        schema: a.schema,
+        ticker: a.ticker,
+        name: a.name,
+        precision: a.precision,
+      })),
+      minPaymentSizeMsat: u64('min_payment_size_msat'),
+      maxPaymentSizeMsat: u64('max_payment_size_msat'),
+      minChannelBalanceSat: u64('min_channel_balance_sat'),
+      maxChannelBalanceSat: u64('max_channel_balance_sat'),
+      minInitialClientBalanceMsat: u64('min_initial_client_balance_msat'),
+      maxInitialClientBalanceMsat: u64('max_initial_client_balance_msat'),
+      minChannelAssetAmount: u64('min_channel_asset_amount'),
+      maxChannelAssetAmount: u64('max_channel_asset_amount'),
+      virtualChannelMode: raw.virtual_channel_mode,
+      lightningAddressMinSendableMsat: u64(
+        'lightning_address_min_sendable_msat'
+      ),
+      lightningAddressMaxSendableMsat: u64(
+        'lightning_address_max_sendable_msat'
+      ),
     };
   }
 
