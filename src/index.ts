@@ -61,7 +61,12 @@ export {
   isSameLspHost,
   lnurlDiscoveryUrl,
 } from './utils/hosts';
-export { toUnitsNumber, fromUnitsNumber } from './utils/units';
+export {
+  toUnitsNumber,
+  fromUnitsNumber,
+  toUnitsBigInt,
+  fromUnitsBigInt,
+} from './utils/units';
 export { calculateMasterFingerprint } from './utils/fingerprint';
 export {
   normalizeSeedBuffer,

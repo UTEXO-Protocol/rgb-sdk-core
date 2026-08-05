@@ -38,6 +38,7 @@ export type {
   LspClientConfig,
   LspGetInfoResponse,
   LspGetInfoWire,
+  LspSupportedAsset,
   LspLnParams,
   LspOnchainSendRequest,
   LspOnchainSendResponse,
