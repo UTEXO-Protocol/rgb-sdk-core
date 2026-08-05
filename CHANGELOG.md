@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.0.0-beta.8
+
+### Added
+
+- **`getInfo()` redesign** — now returns `apiVersion`, `network`, `host`/`port`,
+  `supportedAssets` (asset id, schema, ticker, name, `precision`), and channel/
+  payment size limits. Amounts are `bigint`: utexo-lsp sends u64 as decimal
+  strings, and `Number` silently corrupts values above 2^53. New type
+  `LspSupportedAsset`.
+- **`toUnitsBigInt` / `fromUnitsBigInt`** — bigint-safe counterparts to
+  `toUnitsNumber` / `fromUnitsNumber` for converting decimal amounts to/from
+  integer units at a given `precision`, for asset amounts beyond
+  `Number.MAX_SAFE_INTEGER`.
+
+### Fixed
+
+- A malformed u64 string in a `get_info` response now raises a descriptive
+  `LspError` instead of a bare `SyntaxError`.
+
+### Breaking
+
+- `LspGetInfoResponse` no longer has `alias`, `numChannels`, `numUsableChannels`
+  — replaced by the fields above.
+
 ## 1.0.0-beta.7
 
 ### Added
