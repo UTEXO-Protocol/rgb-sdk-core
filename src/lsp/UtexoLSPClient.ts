@@ -73,12 +73,16 @@ export class LspError extends Error {
  * utexo-lsp sends u64 as decimal strings. Surface a malformed one as an
  * `LspError`, not as a bare `SyntaxError` from `BigInt()`.
  */
-function toBigInt(value: string | undefined, field: string): bigint {
+function toBigInt(
+  value: string | undefined,
+  field: string,
+  endpoint: string
+): bigint {
   try {
     return BigInt(value ?? '');
   } catch {
     throw new LspError(
-      '/get_info',
+      endpoint,
       200,
       `field ${field} is not a u64 string: ${String(value)}`
     );
@@ -201,7 +205,7 @@ export class UtexoLSPClient implements IUtexoLSPClient {
   async getInfo(): Promise<LspGetInfoResponse> {
     const raw = await this.request<LspGetInfoWire>('/get_info');
     const u64 = (key: keyof LspGetInfoWire & string): bigint =>
-      toBigInt(raw[key] as string | undefined, key);
+      toBigInt(raw[key] as string | undefined, key, '/get_info');
     return {
       apiVersion: raw.api_version,
       pubkey: raw.pubkey,
