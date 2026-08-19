@@ -1,5 +1,59 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`requestExternalInvoice()`** — quote a hosted BOLT11 for a payer that is not
+  this wallet. The LSP signs the invoice against a hash the receiver
+  pre-registered, so nothing in it names the payer and the RGB contract id and
+  amount ride inside the BOLT11: an APay-unaware RGB Lightning node can settle it
+  with a plain `POST /sendpayment`. The asset comes from LNURL discovery, not
+  from configuration — pass a **ticker** or a contract id as `asset`, or nothing
+  and let `prefer` (`'convertible'` by default) choose. Ambiguity throws
+  `LspAmbiguousPayableAssetError` rather than being guessed: the quote pins one
+  asset for the life of the invoice, and an external payer holding the other one
+  finds out only by failing to pay. New types `RequestExternalInvoiceOptions`,
+  `ExternalInvoice`.
+- **`listPayableAssets()`** — the same menu on its own: an address's payout asset
+  and the assets the LSP converts to it 1:1, with tickers and precisions, so a UI
+  can offer a picker with no configuration. Reads LNURL discovery rather than
+  `/get_info`, whose `supportedAssets` is the LSP-wide served set and excludes
+  the convertible assets it accepts but never provisions. New type
+  `PayableAssets`.
+- **`quoteAddress()`** — everything `payAddress` does except paying. `payAddress`
+  now delegates to it; its behaviour is unchanged. New type `AddressQuote`,
+  which also surfaces the LSP's APay `proof` (and with it the payment hash).
+- New errors `LspNoPayableAssetError`, `LspUnknownPayableAssetError`,
+  `LspAmbiguousPayableAssetError`.
+
+### Changed
+
+- **`receiveAsset()` no longer sends `rgb_invoice.asset_id` by default.** The
+  receiver names only what it is paid in over Lightning; the LSP resolves the
+  on-chain asset from its own `CONVERTIBLE_PAIRS`, so a sender can pay in the
+  canonical asset it already holds without its contract id being configured
+  client-side. The resolved value comes back as `onchainAssetId`, with
+  `converted` saying whether the two legs differ. Pass
+  `onchainAsset: 'payout'` for the previous one-asset-end-to-end behaviour.
+  With no pair declared for the asset, both modes are identical.
+
+  **Requires utexo-lsp with convertible `/lightning_receive`** — older builds
+  reject a request without `rgb_invoice.asset_id`. Pin `onchainAsset: 'payout'`
+  when talking to one.
+
+- `LspRgbParams.assetId` is now optional, and the client omits the key entirely
+  rather than sending an explicit null.
+
+### Fixed
+
+- **`awaitReceiveSettlement` and `waitForOutboundLiquidity` now honour
+  `WaitOptions.onEachPoll`.** It is documented as running at the start of every
+  poll iteration, but only `waitForChannel` ever called it. A regtest caller
+  passing `onEachPoll: () => mine(1)` — or one that refreshes a counterparty so a
+  transfer can be acknowledged and broadcast — got a loop that only observed, and
+  therefore a timeout that no amount of waiting would have resolved.
+
 ## 1.0.0-beta.8
 
 ### Added

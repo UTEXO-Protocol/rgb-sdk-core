@@ -6,10 +6,17 @@ import type {
   LspLightningReceiveRequest,
   LspLightningReceiveResponse,
   LspLnurlpCallbackResponse,
+  LspLnurlpDiscovery,
 } from './lsp-types';
 
 export interface IUtexoLSPClient {
   getInfo(): Promise<LspGetInfoResponse>;
+
+  /**
+   * LUD-06 discovery without the callback hop — the payer reads `payoutAsset` /
+   * `acceptedAssets` from it to decide which asset to be quoted in.
+   */
+  discoverAddress(username: string): Promise<LspLnurlpDiscovery>;
 
   /**
    * Full LUD-06 resolution: discovers callback URL from LNURL metadata then

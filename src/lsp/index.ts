@@ -17,15 +17,26 @@ export type {
   SendAssetOptions,
   SendAssetResult,
   PayAddressOptions,
+  PayAddressAssetParam,
+  AddressQuote,
+  PayableAssets,
+  RequestExternalInvoiceOptions,
+  ExternalInvoice,
+  SelectPaymentAssetOptions,
+  AssetSelection,
   LightningAddressInfo,
   ClaimResult,
 } from './UtexoLsp';
 
 export {
+  LspAmbiguousPayableAssetError,
   LspAmountOutOfRangeError,
   LspChannelTimeoutError,
+  LspInsufficientAssetLiquidityError,
   LspLiquidityTimeoutError,
+  LspNoPayableAssetError,
   LspSettlementError,
+  LspUnknownPayableAssetError,
 } from './LspErrors';
 
 export {
@@ -39,6 +50,7 @@ export type {
   LspGetInfoResponse,
   LspGetInfoWire,
   LspSupportedAsset,
+  LspSupportedAssetWire,
   LspLnParams,
   LspOnchainSendRequest,
   LspOnchainSendResponse,
@@ -48,6 +60,7 @@ export type {
   LspLightningReceiveResponse,
   LspLightningReceiveWire,
   LspLnurlpDiscovery,
+  LspLnurlpDiscoveryWire,
   LspLnurlpCallbackResponse,
   LspLnurlpCallbackWire,
   LspLightningAddressByPubkeyResponse,

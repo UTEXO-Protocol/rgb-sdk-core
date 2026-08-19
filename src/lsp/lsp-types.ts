@@ -34,6 +34,15 @@ export interface LspSupportedAsset {
   precision: number;
 }
 
+/** Wire shape of {@link LspSupportedAsset} — the LSP sends snake_case. */
+export interface LspSupportedAssetWire {
+  asset_id: string;
+  schema: AssetSchema;
+  ticker?: string;
+  name: string;
+  precision: number;
+}
+
 /**
  * utexo-lsp discovery document (`GET /get_info`, api_version 1). Amounts are
  * `bigint`: the wire sends u64 as strings, and `Number` corrupts them above
@@ -69,13 +78,7 @@ export interface LspGetInfoWire {
   network: string;
   host?: string;
   port?: number;
-  supported_assets: {
-    asset_id: string;
-    schema: AssetSchema;
-    ticker?: string;
-    name: string;
-    precision: number;
-  }[];
+  supported_assets: LspSupportedAssetWire[];
   min_payment_size_msat: string;
   max_payment_size_msat: string;
   min_channel_balance_sat: string;
@@ -111,7 +114,12 @@ export interface LspOnchainSendResponse {
 }
 
 export interface LspRgbParams {
-  assetId: string;
+  /**
+   * Omit to let the LSP resolve the on-chain asset from its own
+   * `CONVERTIBLE_PAIRS` — see `UtexoLsp.receiveAsset`'s `onchainAsset`. Older
+   * LSPs require it.
+   */
+  assetId?: string;
   assignment?: string;
   durationSeconds?: number;
   minConfirmations?: number;
@@ -127,6 +135,10 @@ export interface LspLightningReceiveResponse {
   lnInvoice: string;
   rgbInvoice: string;
   mappingId: string;
+  /** Asset the on-chain sender must send, as resolved by the LSP. */
+  rgbAssetId?: string;
+  /** `true` when it differs from the LN invoice's asset (LSP converts 1:1). */
+  converted?: boolean;
 }
 
 /** Raw wire shape returned by utexo-lsp `/lightning_receive` (snake_case keys). */
@@ -134,6 +146,8 @@ export interface LspLightningReceiveWire {
   ln_invoice: string;
   rgb_invoice: string;
   mapping_id: string | number;
+  rgb_asset_id?: string;
+  converted?: boolean;
 }
 
 /** Raw wire shape returned by utexo-lsp `/onchain_send` (snake_case keys). */
@@ -169,6 +183,36 @@ export interface LspLnurlpDiscovery {
   callback: string;
   minSendable: number;
   maxSendable: number;
+  metadata?: string;
+  tag?: string;
+  recipientPubkey?: string;
+  addressSig?: string;
+  /**
+   * The asset this address is always paid out in — a property of the receiver's
+   * channel with its LSP, not of any one payment. Absent on an LSP that predates
+   * the field, and on an address whose receiver has no asset channel yet.
+   */
+  payoutAsset?: LspSupportedAsset;
+  /**
+   * What the callback will quote: the payout asset plus every asset the LSP
+   * accepts and converts to it 1:1 (a pair its operator declared). The payer's wallet picks
+   * from this — the callback is unauthenticated, so at quote time the LSP does
+   * not know whose channels to look at and cannot choose for it.
+   */
+  acceptedAssets?: LspSupportedAsset[];
+}
+
+/** Raw wire shape of LNURL-pay discovery (asset fields are snake_case). */
+export interface LspLnurlpDiscoveryWire {
+  callback: string;
+  minSendable: number;
+  maxSendable: number;
+  metadata?: string;
+  tag?: string;
+  recipient_pubkey?: string;
+  address_sig?: string;
+  payout_asset?: LspSupportedAssetWire;
+  accepted_assets?: LspSupportedAssetWire[];
 }
 
 /** Wire shape of the LNURL-pay callback (snake_case `proof`). */

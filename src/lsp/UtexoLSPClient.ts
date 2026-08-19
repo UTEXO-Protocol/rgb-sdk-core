@@ -14,6 +14,9 @@ import type {
   LspLnurlpCallbackResponse,
   LspLnurlpCallbackWire,
   LspLnurlpDiscovery,
+  LspLnurlpDiscoveryWire,
+  LspSupportedAsset,
+  LspSupportedAssetWire,
   LspApayInvoiceProofWire,
   ApayInvoiceProof,
 } from './lsp-types';
@@ -27,7 +30,7 @@ import {
  * `request<T>()` does a plain `JSON.parse` with no key transform, so this must
  * be explicit (same pattern as the rest of this client).
  */
-function mapApayProof(
+export function mapApayProof(
   raw: LspApayInvoiceProofWire | undefined
 ): ApayInvoiceProof | undefined {
   if (!raw) return undefined;
@@ -47,6 +50,43 @@ function mapApayProof(
     batchSig: raw.batch_sig,
     createdAt: raw.created_at,
     expiresAt: raw.expires_at,
+  };
+}
+
+/** snake_case asset entry → SDK shape. Shared by `/get_info` and LNURL discovery. */
+function mapSupportedAsset(a: LspSupportedAssetWire): LspSupportedAsset {
+  return {
+    assetId: a.asset_id,
+    schema: a.schema,
+    ticker: a.ticker,
+    name: a.name,
+    precision: a.precision,
+  };
+}
+
+/**
+ * LNURL discovery, with the asset fields mapped. `payout_asset` /
+ * `accepted_assets` are absent on an LSP that predates them, so both stay
+ * `undefined` rather than becoming empty arrays — "no field" and "no asset
+ * channel yet" are different answers, and callers must not confuse them.
+ */
+export function mapLnurlpDiscovery(
+  raw: LspLnurlpDiscoveryWire
+): LspLnurlpDiscovery {
+  return {
+    callback: raw.callback,
+    minSendable: raw.minSendable,
+    maxSendable: raw.maxSendable,
+    metadata: raw.metadata,
+    tag: raw.tag,
+    recipientPubkey: raw.recipient_pubkey,
+    addressSig: raw.address_sig,
+    payoutAsset: raw.payout_asset
+      ? mapSupportedAsset(raw.payout_asset)
+      : undefined,
+    acceptedAssets: raw.accepted_assets
+      ? raw.accepted_assets.map(mapSupportedAsset)
+      : undefined,
   };
 }
 
@@ -111,10 +151,12 @@ function snakeCaseRgbParams(
   rgb: LspLightningReceiveRequest['rgb']
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {
-    asset_id: rgb.assetId,
     min_confirmations: rgb.minConfirmations ?? 1,
     witness: !!rgb.witness,
   };
+  // Sent only when named: an absent asset_id is what asks the LSP to resolve the
+  // on-chain leg itself, so it must not go out as an explicit null.
+  if (rgb.assetId !== undefined) out.asset_id = rgb.assetId;
   if (rgb.assignment !== undefined) out.assignment = rgb.assignment;
   if (rgb.durationSeconds !== undefined)
     out.duration_seconds = rgb.durationSeconds;
@@ -212,13 +254,7 @@ export class UtexoLSPClient implements IUtexoLSPClient {
       network: raw.network,
       host: raw.host,
       port: raw.port,
-      supportedAssets: (raw.supported_assets ?? []).map((a) => ({
-        assetId: a.asset_id,
-        schema: a.schema,
-        ticker: a.ticker,
-        name: a.name,
-        precision: a.precision,
-      })),
+      supportedAssets: (raw.supported_assets ?? []).map(mapSupportedAsset),
       minPaymentSizeMsat: u64('min_payment_size_msat'),
       maxPaymentSizeMsat: u64('max_payment_size_msat'),
       minChannelBalanceSat: u64('min_channel_balance_sat'),
@@ -248,6 +284,29 @@ export class UtexoLSPClient implements IUtexoLSPClient {
    * username asks our LSP about its own user of that name. Callers must route
    * on the address domain first (see `UtexoLsp.payAddress`).
    */
+  /**
+   * LUD-06 discovery only (`GET <baseUrl>/.well-known/lnurlp/<username>`), with
+   * no callback hop. Read it when the payer has to decide *what* to pay with:
+   * `payoutAsset` is what the receiver is delivered, `acceptedAssets` what the
+   * callback will quote.
+   *
+   * Same scoping caveat as {@link resolveAddress} — this asks OUR LSP about its
+   * own user of that name.
+   */
+  async discoverAddress(username: string): Promise<LspLnurlpDiscovery> {
+    const raw = await this.request<LspLnurlpDiscoveryWire>(
+      `/.well-known/lnurlp/${encodeURIComponent(username)}`
+    );
+    if (!raw?.callback) {
+      throw new LspError(
+        '/.well-known/lnurlp',
+        200,
+        'missing callback in LNURL response'
+      );
+    }
+    return mapLnurlpDiscovery(raw);
+  }
+
   async resolveAddress(
     username: string,
     amtMsat: number,
@@ -255,16 +314,7 @@ export class UtexoLSPClient implements IUtexoLSPClient {
     assetAmount?: number
   ): Promise<LspLnurlpCallbackResponse> {
     assertValidAmtMsat(amtMsat);
-    const meta = await this.request<LspLnurlpDiscovery>(
-      `/.well-known/lnurlp/${encodeURIComponent(username)}`
-    );
-    if (!meta?.callback) {
-      throw new LspError(
-        '/.well-known/lnurlp',
-        200,
-        'missing callback in LNURL response'
-      );
-    }
+    const meta = await this.discoverAddress(username);
     assertAmtMsatInSendableRange(amtMsat, meta.minSendable, meta.maxSendable);
     const sep = meta.callback.includes('?') ? '&' : '?';
     let url = `${this.rewriteCallbackUrl(meta.callback)}${sep}amount=${amtMsat}`;
@@ -374,6 +424,8 @@ export class UtexoLSPClient implements IUtexoLSPClient {
       lnInvoice: raw.ln_invoice,
       rgbInvoice: raw.rgb_invoice,
       mappingId: String(raw.mapping_id),
+      rgbAssetId: raw.rgb_asset_id,
+      converted: raw.converted,
     };
   }
 }

@@ -13,7 +13,11 @@
  *     `String(status).toUpperCase()` comparisons that differed per platform.
  */
 
-import { UtexoLSPClient } from './UtexoLSPClient';
+import {
+  UtexoLSPClient,
+  mapApayProof,
+  mapLnurlpDiscovery,
+} from './UtexoLSPClient';
 import { parseLightningAddress } from '../utils/lightning-address';
 import { isSameLspHost, lnurlDiscoveryUrl } from '../utils/hosts';
 import type { IUtexoLSPClient } from './IUtexoLSPClient';
@@ -26,19 +30,27 @@ import type {
 } from '../rln/model';
 import { isClaimablePaymentStatus } from '../rln/status';
 import {
+  type ApayInvoiceProof,
   type LspPeer,
   type ChannelReadyInfo,
   type LspOnchainSendResponse,
   type LspLnParams,
+  type LspLnurlpCallbackWire,
   type LspLnurlpDiscovery,
+  type LspLnurlpDiscoveryWire,
+  type LspSupportedAsset,
   type ReceiveSettlementOutcome,
   peerUri,
 } from './lsp-types';
 import {
+  LspAmbiguousPayableAssetError,
   LspAmountOutOfRangeError,
   LspChannelTimeoutError,
+  LspInsufficientAssetLiquidityError,
   LspLiquidityTimeoutError,
+  LspNoPayableAssetError,
   LspSettlementError,
+  LspUnknownPayableAssetError,
 } from './LspErrors';
 import {
   assertAmtMsatInSendableRange,
@@ -63,6 +75,7 @@ export interface WaitOptions {
 // ── receiveAsset ──────────────────────────────────────────────────────────────
 
 export interface ReceiveAssetOptions {
+  /** What you are paid over Lightning — the only asset id this call needs. */
   assetId: string;
   amountSats: number;
   amountRgb: number;
@@ -71,6 +84,21 @@ export interface ReceiveAssetOptions {
    * in sync; the LSP rejects the request if they differ. Default: 3600.
    */
   expirySeconds?: number;
+  /**
+   * Which asset the **on-chain sender** pays in.
+   *
+   * `'convertible'` (default) lets the LSP issue the RGB invoice in the asset it
+   * accepts and converts 1:1 to `assetId` — typically the canonical contract a
+   * sender already holds, rather than the LSP's own Lightning-side asset. The
+   * LSP resolves it from its own `CONVERTIBLE_PAIRS`, so its contract id never
+   * has to be configured here; the resolved value comes back as
+   * {@link ReceiveAssetResult.onchainAssetId}. With no pair declared this is
+   * identical to `'payout'`.
+   *
+   * `'payout'` asks for `assetId` on both legs — one asset end to end, and the
+   * only form older LSPs accept.
+   */
+  onchainAsset?: 'convertible' | 'payout';
 }
 
 export interface ReceiveAssetResult {
@@ -79,6 +107,14 @@ export interface ReceiveAssetResult {
   /** RGB invoice issued by the LSP. Give this to the on-chain sender. */
   rgbInvoice: string;
   mappingId: string;
+  /**
+   * The asset the on-chain sender must send, as resolved by the LSP. Absent on
+   * an LSP that predates the field — the RGB invoice itself remains
+   * authoritative either way.
+   */
+  onchainAssetId?: string;
+  /** `true` when the two legs differ, i.e. the LSP converts the pair 1:1. */
+  converted: boolean;
 }
 
 // ── sendAsset ─────────────────────────────────────────────────────────────────
@@ -95,6 +131,19 @@ export interface SendAssetResult extends LspOnchainSendResponse {
 
 // ── payAddress ────────────────────────────────────────────────────────────────
 
+/**
+ * Asset leg of a Lightning Address payment.
+ *
+ * Widens {@link LightningAssetParam} in one way: `assetId` may be omitted, which
+ * asks the SDK to pick it — see {@link UtexoLsp.selectPaymentAsset}.
+ */
+export interface PayAddressAssetParam {
+  /** Omit to select from discovery + local liquidity instead of naming one. */
+  assetId?: string;
+  amount?: number;
+  assetAmount?: number;
+}
+
 export interface PayAddressOptions {
   /**
    * Lightning Address, e.g. `alice@lsp.utexo.com`. UMA's `$alice@lsp.utexo.com`
@@ -102,7 +151,107 @@ export interface PayAddressOptions {
    */
   address: string;
   amtMsat: number;
-  asset?: LightningAssetParam;
+  asset?: LightningAssetParam | PayAddressAssetParam;
+}
+
+// ── quoteAddress ──────────────────────────────────────────────────────────────
+
+/**
+ * A BOLT11 quoted against a Lightning Address, not yet paid.
+ *
+ * The invoice is hosted — its payee is the LSP, which signs it against a payment
+ * hash the receiver pre-registered — so it is payable by anyone, not just the
+ * wallet that asked for it. See {@link UtexoLsp.requestExternalInvoice}.
+ */
+export interface AddressQuote {
+  invoice: string;
+  amtMsat: number;
+  /** The asset the invoice is denominated in, when it carries one. */
+  assetId?: string;
+  assetAmount?: number;
+  /** Present only when the SDK chose the asset (`asset.assetId` omitted). */
+  assetSelection?: AssetSelection;
+  /**
+   * APay hash-substitution proof, when the LSP returns one. Its `paymentHash` is
+   * the hash the invoice was built against.
+   */
+  proof?: ApayInvoiceProof;
+}
+
+// ── listPayableAssets / requestExternalInvoice ────────────────────────────────
+
+/** What an address can be paid in, straight from its LNURL discovery document. */
+export interface PayableAssets {
+  /** What the receiver is delivered. Absent until it has a usable asset channel. */
+  payoutAsset?: LspSupportedAsset;
+  /** Everything the callback will quote — the payout asset first. */
+  accepted: LspSupportedAsset[];
+  /** `accepted` minus the payout asset: the assets the LSP converts 1:1. */
+  convertible: LspSupportedAsset[];
+}
+
+export interface RequestExternalInvoiceOptions {
+  amtMsat: number;
+  /** Payment size in base units (10^-precision). */
+  assetAmount: number;
+  /**
+   * Which asset to quote in — a **ticker** (`'BUSDT'`, case-insensitive) or a
+   * contract id, matched against {@link PayableAssets.accepted}. Omit to let
+   * `prefer` decide.
+   */
+  asset?: string;
+  /**
+   * How to choose when `asset` is omitted. Default `'convertible'`: an external
+   * payer is by definition not on the receiver's own payout rails, so the asset
+   * worth quoting is the bridge one. `'payout'` asks for the no-conversion asset
+   * instead. Either way an unambiguous single candidate wins and more than one
+   * throws {@link LspAmbiguousPayableAssetError} rather than being guessed.
+   */
+  prefer?: 'convertible' | 'payout';
+  /** Address to quote against. Defaults to this wallet's own LSP address. */
+  address?: string;
+}
+
+/** An {@link AddressQuote} plus who it is payable to and in what. */
+export interface ExternalInvoice extends AddressQuote {
+  address: string;
+  username: string;
+  domain: string;
+  /** The chosen asset with its ticker and precision, for display. */
+  asset?: LspSupportedAsset;
+  /** `true` when the LSP converts: the receiver is delivered a different asset. */
+  converted: boolean;
+  /** From the LSP's proof, when it returns one. */
+  paymentHash?: string;
+}
+
+// ── selectPaymentAsset ────────────────────────────────────────────────────────
+
+export interface SelectPaymentAssetOptions {
+  /** Lightning Address to be paid. */
+  address: string;
+  /** Payment size in base units (10^-precision), the only unit RGB APIs speak. */
+  assetAmount: number;
+  /** Reuse an already-fetched discovery document instead of fetching again. */
+  discovery?: LspLnurlpDiscovery;
+}
+
+/** Which asset this wallet should ask to be quoted in, and why. */
+export interface AssetSelection {
+  assetId: string;
+  /** Discovery's entry for it — carries ticker and precision for display. */
+  asset?: LspSupportedAsset;
+  /**
+   * `true` when the chosen asset is not the receiver's payout asset, so the LSP
+   * converts the pair 1:1 on its own books. The two assets are independent
+   * contracts and the rate is the LSP's word, not the protocol's — see
+   * docs/apay-linked-asset-options.uk.md §3 and §10.
+   */
+  converted: boolean;
+  /** Local (spendable) base units found in the channel backing the choice. */
+  localAssetAmount: number;
+  /** What the receiver is delivered, when discovery says. */
+  payoutAsset?: LspSupportedAsset;
 }
 
 // ── enableLightningAddress ────────────────────────────────────────────────────
@@ -235,12 +384,26 @@ export class UtexoLsp {
     const elapsedSeconds = Math.round((Date.now() - createdAtMs) / 1000);
     const durationSeconds = Math.max(1, expirySeconds - elapsedSeconds);
 
+    // Omitting assetId is what asks the LSP to resolve the on-chain leg — the
+    // whole point of 'convertible', and why no contract id for it appears here.
     const lr = await this.http.lightningReceive({
       lnInvoice,
-      rgb: { assetId: opts.assetId, durationSeconds },
+      rgb: {
+        assetId:
+          (opts.onchainAsset ?? 'convertible') === 'payout'
+            ? opts.assetId
+            : undefined,
+        durationSeconds,
+      },
     });
 
-    return { lnInvoice, rgbInvoice: lr.rgbInvoice, mappingId: lr.mappingId };
+    return {
+      lnInvoice,
+      rgbInvoice: lr.rgbInvoice,
+      mappingId: lr.mappingId,
+      onchainAssetId: lr.rgbAssetId,
+      converted: lr.converted ?? false,
+    };
   }
 
   // ── 4. Settlement polling ───────────────────────────────────────────────────
@@ -263,6 +426,10 @@ export class UtexoLsp {
 
     while (Date.now() < deadline) {
       this.checkAbort(opts.signal);
+      // An inbound receive can be waiting on chain work this wallet does not do
+      // itself — a confirmation, or a counterparty that has to refresh before it
+      // broadcasts. Without this hook the loop only ever observes.
+      if (opts.onEachPoll) await opts.onEachPoll();
 
       await this.wallet.syncWallet();
       // The node's own vocabulary — no TransferStatus fold in between.
@@ -306,6 +473,7 @@ export class UtexoLsp {
 
     while (Date.now() < deadline) {
       this.checkAbort(opts.signal);
+      if (opts.onEachPoll) await opts.onEachPoll();
 
       await this.wallet.syncWallet();
       const channels = await this.wallet.listChannels();
@@ -367,9 +535,37 @@ export class UtexoLsp {
    * it about a foreign address returns a valid invoice for the wrong person
    * whenever the usernames happen to collide.
    */
-  async payAddress(
-    opts: PayAddressOptions
-  ): Promise<{ invoice: string; sendResult: LightningSendRequest }> {
+  async payAddress(opts: PayAddressOptions): Promise<{
+    invoice: string;
+    sendResult: LightningSendRequest;
+    /** Present only when the SDK chose the asset (`asset.assetId` omitted). */
+    assetSelection?: AssetSelection;
+  }> {
+    const quote = await this.quoteAddress(opts);
+    const sendResult = await this.wallet.payLightningInvoice({
+      lnInvoice: quote.invoice,
+    });
+    return {
+      invoice: quote.invoice,
+      sendResult,
+      assetSelection: quote.assetSelection,
+    };
+  }
+
+  /**
+   * Everything {@link payAddress} does except paying: resolve the address and
+   * return the BOLT11 it quoted.
+   *
+   * Split out because the invoice is *hosted* — the LSP signs it against a hash
+   * the receiver pre-registered, so its payee is the LSP and nothing in it names
+   * the payer. Whoever holds the string can pay it, which is what makes an
+   * external, APay-unaware node a viable payer (see
+   * {@link requestExternalInvoice}).
+   *
+   * Quoting is not free: the callback reserves a payment hash out of the
+   * receiver's APay batch, so a quote that is never paid burns one.
+   */
+  async quoteAddress(opts: PayAddressOptions): Promise<AddressQuote> {
     // Accepts both plain Lightning Addresses and UMA's `$user@host` form
     // (UMAD-01) — the `$` is stripped before LNURL discovery.
     assertValidAmtMsat(opts.amtMsat);
@@ -383,7 +579,20 @@ export class UtexoLsp {
         'payAddress: asset.assetAmount (or its alias asset.amount) is required when asset is set'
       );
 
+    // An asset leg without an assetId means "you pick" — resolve it before
+    // quoting, because the quote pins the asset for the life of the invoice.
+    let assetSelection: AssetSelection | undefined;
+    let assetId = opts.asset?.assetId;
+    if (opts.asset && !assetId) {
+      assetSelection = await this.selectPaymentAsset({
+        address: opts.address,
+        assetAmount: assetAmount as number,
+      });
+      assetId = assetSelection.assetId;
+    }
+
     let invoice: string | undefined;
+    let proof: ApayInvoiceProof | undefined;
 
     if (isSameLspHost(domain, this.peer.baseUrl)) {
       // LNURL resolution is an idempotent GET; a freshly (re)started LSP can
@@ -397,10 +606,11 @@ export class UtexoLsp {
           const cb = await this.http.resolveAddress(
             username,
             opts.amtMsat,
-            opts.asset?.assetId,
+            assetId,
             assetAmount
           );
           invoice = cb.pr;
+          proof = cb.proof;
         } catch (err) {
           resolveErr = err;
           if (
@@ -433,19 +643,149 @@ export class UtexoLsp {
       );
 
       let url = `${meta.callback}${meta.callback.includes('?') ? '&' : '?'}amount=${opts.amtMsat}`;
-      if (opts.asset?.assetId)
-        url += `&asset_id=${encodeURIComponent(opts.asset.assetId)}`;
+      if (assetId) url += `&asset_id=${encodeURIComponent(assetId)}`;
       if (assetAmount !== undefined) url += `&asset_amount=${assetAmount}`;
 
-      const cb = (await fetch(url).then((r) => r.json())) as { pr: string };
+      const cb = (await fetch(url).then((r) =>
+        r.json()
+      )) as LspLnurlpCallbackWire;
       invoice = cb.pr;
+      proof = mapApayProof(cb.proof);
     }
 
     if (!invoice) throw new Error('No invoice returned for Lightning Address');
-    const sendResult = await this.wallet.payLightningInvoice({
-      lnInvoice: invoice,
-    });
-    return { invoice, sendResult };
+    return {
+      invoice,
+      amtMsat: opts.amtMsat,
+      assetId,
+      assetAmount,
+      assetSelection,
+      proof,
+    };
+  }
+
+  /**
+   * LNURL discovery for a Lightning Address, routed on its domain exactly like
+   * {@link payAddress}: our LSP for an address it hosts, plain unauthenticated
+   * LNURL for anyone else's.
+   *
+   * The asset fields are the reason to call it: `payoutAsset` is what the
+   * receiver is delivered, `acceptedAssets` what the callback will quote.
+   */
+  async discoverAddress(address: string): Promise<LspLnurlpDiscovery> {
+    const { username, domain } = parseLightningAddress(address);
+    if (isSameLspHost(domain, this.peer.baseUrl)) {
+      return this.http.discoverAddress(username);
+    }
+    const raw = (await fetch(lnurlDiscoveryUrl(domain, username)).then((r) =>
+      r.json()
+    )) as LspLnurlpDiscoveryWire;
+    if (!raw?.callback) throw new Error('Missing callback in LNURL response');
+    return mapLnurlpDiscovery(raw);
+  }
+
+  /**
+   * What an address can be paid in, split into its payout asset and the assets
+   * the LSP converts to it 1:1.
+   *
+   * Read it instead of hard-coding contract ids: the entries carry ticker and
+   * precision, so a UI can offer a picker with no configuration of its own.
+   *
+   * Discovery, not `/get_info`, is the source — and deliberately so. `get_info`'s
+   * `supportedAssets` is the LSP-wide served set (`SUPPORTED_ASSET_IDS`), which
+   * excludes the convertible assets it accepts but never provisions. Discovery
+   * answers the narrower and correct question: what *this receiver* can be paid
+   * in, derived from the channel it actually holds.
+   *
+   * @param address defaults to this wallet's own LSP-assigned address.
+   */
+  async listPayableAssets(address?: string): Promise<PayableAssets> {
+    const target =
+      address ?? (await this.ownLightningAddress('listPayableAssets')).address;
+    const discovery = await this.discoverAddress(target);
+    const payoutAsset = discovery.payoutAsset;
+    const accepted =
+      discovery.acceptedAssets ?? (payoutAsset ? [payoutAsset] : []);
+    const convertible = payoutAsset
+      ? accepted.filter((a) => a.assetId !== payoutAsset.assetId)
+      : [];
+    return { payoutAsset, accepted, convertible };
+  }
+
+  /**
+   * Pick the asset to be quoted in: the receiver's payout asset when this wallet
+   * can pay it, otherwise an asset discovery advertises as accepted, which the
+   * LSP converts 1:1 on its books.
+   *
+   * Conversion is the fallback, not the default. Paying in the payout asset is
+   * one asset end to end and trusts the LSP for nothing beyond delivery;
+   * converting additionally trusts it for the amount of the second leg, since
+   * only the payment hash — not the asset or the amount — is cryptographically
+   * shared between the legs (docs/apay-linked-asset-options.uk.md §3).
+   *
+   * The choice is the payer's to make because the LNURL callback is
+   * unauthenticated: at quote time the LSP does not know who is paying, so it
+   * cannot look at their channels. And it must be made *before* the invoice
+   * exists — the quote pins the asset, and paying a different one later means a
+   * new callback round trip and another hash out of the receiver's batch.
+   *
+   * Liquidity is read per channel, not summed: there is no cross-asset MPP, so
+   * the whole amount has to fit in one channel.
+   */
+  async selectPaymentAsset(
+    opts: SelectPaymentAssetOptions
+  ): Promise<AssetSelection> {
+    const discovery =
+      opts.discovery ?? (await this.discoverAddress(opts.address));
+    const payout = discovery.payoutAsset;
+    const accepted = discovery.acceptedAssets ?? [];
+
+    // Payout first: it is the no-conversion path, and an LSP that lists it
+    // anywhere else in `accepted_assets` still means the same thing.
+    const ordered: LspSupportedAsset[] = [];
+    if (payout) ordered.push(payout);
+    for (const a of accepted) {
+      if (!ordered.some((seen) => seen.assetId === a.assetId)) ordered.push(a);
+    }
+    if (!ordered.length) {
+      throw new Error(
+        'selectPaymentAsset: discovery advertises no payout or accepted asset ' +
+          '— this LSP predates asset discovery, so pass asset.assetId explicitly'
+      );
+    }
+
+    const local = await this.localAssetAmounts();
+    const considered: { assetId: string; localAmount: number }[] = [];
+    for (const asset of ordered) {
+      const localAmount = local.get(asset.assetId) ?? 0;
+      considered.push({ assetId: asset.assetId, localAmount });
+      if (localAmount >= opts.assetAmount) {
+        return {
+          assetId: asset.assetId,
+          asset,
+          converted: !!payout && asset.assetId !== payout.assetId,
+          localAssetAmount: localAmount,
+          payoutAsset: payout,
+        };
+      }
+    }
+    throw new LspInsufficientAssetLiquidityError(opts.assetAmount, considered);
+  }
+
+  /**
+   * Largest spendable RGB amount per asset across this wallet's usable channels.
+   * Per channel rather than summed, for the same reason as above: one payment
+   * rides one channel.
+   */
+  private async localAssetAmounts(): Promise<Map<string, number>> {
+    await this.wallet.syncWallet();
+    const out = new Map<string, number>();
+    for (const c of await this.wallet.listChannels()) {
+      if (!c.assetId || !this.isUsable(c)) continue;
+      const amount = Number(c.assetLocalAmount ?? 0);
+      if (amount > (out.get(c.assetId) ?? 0)) out.set(c.assetId, amount);
+    }
+    return out;
   }
 
   // ── 8. Async / offline receive (APay) ───────────────────────────────────────
@@ -470,12 +810,8 @@ export class UtexoLsp {
    * `invalid_hash_batch`.
    */
   async enableLightningAddress(): Promise<LightningAddressInfo> {
-    const nodeInfo = await this.wallet.getNodeInfo();
-    const pubkey = String(nodeInfo?.pubkey ?? '');
-    if (!pubkey) throw new Error('enableLightningAddress: wallet not unlocked');
-
+    const addr = await this.ownLightningAddress('enableLightningAddress');
     const lspInfo = await this.http.getInfo();
-    const addr = await this.resolveLightningAddress(pubkey);
     const pool = await this.wallet.apayNewWithAddress(
       lspInfo.pubkey,
       addr.username,
@@ -490,6 +826,133 @@ export class UtexoLsp {
       nextIndexExpected: pool.nextIndexExpected,
       refillBatchSize: pool.refillBatchSize,
     };
+  }
+
+  /**
+   * Quote a BOLT11 for an **external** payer — a node that knows nothing about
+   * this SDK, APay or Lightning Addresses and can only be handed an invoice.
+   *
+   * The invoice is hosted by the LSP, so it names no payer and carries the RGB
+   * contract id and amount inside the BOLT11 itself. Paying it is therefore a
+   * plain `POST /sendpayment {"invoice": …}` on any RGB Lightning node that has
+   * a channel with this LSP in the quoted asset — no other integration.
+   *
+   * The asset is resolved from LNURL discovery rather than configured: pass a
+   * ticker, or nothing and let `prefer` decide (`'convertible'` by default —
+   * see {@link RequestExternalInvoiceOptions.prefer}).
+   *
+   * Every call reserves a payment hash from the receiver's APay batch, so call
+   * {@link enableLightningAddress} first and refill via {@link refillHashPool}
+   * as `unusedHashes` runs down. An invoice that is quoted and never paid still
+   * costs a hash.
+   */
+  async requestExternalInvoice(
+    opts: RequestExternalInvoiceOptions
+  ): Promise<ExternalInvoice> {
+    if (!Number.isFinite(opts.assetAmount) || opts.assetAmount <= 0) {
+      throw new ValidationError(
+        'requestExternalInvoice: assetAmount must be a positive number of base units'
+      );
+    }
+
+    const { username, domain } = opts.address
+      ? parseLightningAddress(opts.address)
+      : await this.ownLightningAddress('requestExternalInvoice');
+    const address = `${username}@${domain}`;
+
+    const payable = await this.listPayableAssets(address);
+    const { asset, converted } = this.pickPayableAsset(
+      address,
+      payable,
+      opts.asset,
+      opts.prefer ?? 'convertible'
+    );
+
+    const quote = await this.quoteAddress({
+      address,
+      amtMsat: opts.amtMsat,
+      asset: { assetId: asset.assetId, assetAmount: opts.assetAmount },
+    });
+
+    return {
+      ...quote,
+      address,
+      username,
+      domain,
+      asset,
+      converted,
+      paymentHash: quote.proof?.paymentHash,
+    };
+  }
+
+  /**
+   * Resolve `requested` (ticker or contract id) against the address's menu, or
+   * choose for the caller when it named nothing.
+   *
+   * Ambiguity throws instead of picking. The quote pins one asset for the life
+   * of the invoice, and an external payer holding the other one finds out only
+   * by failing to pay — a guess here is paid for by someone who cannot see it.
+   */
+  private pickPayableAsset(
+    address: string,
+    payable: PayableAssets,
+    requested: string | undefined,
+    prefer: 'convertible' | 'payout'
+  ): { asset: LspSupportedAsset; converted: boolean } {
+    const { accepted, convertible, payoutAsset } = payable;
+    if (!accepted.length) throw new LspNoPayableAssetError(address);
+
+    const isConverted = (a: LspSupportedAsset) =>
+      !!payoutAsset && a.assetId !== payoutAsset.assetId;
+
+    if (requested) {
+      const needle = requested.trim().toLowerCase();
+      const hit = accepted.find(
+        (a) =>
+          a.assetId.toLowerCase() === needle ||
+          (a.ticker ?? '').toLowerCase() === needle
+      );
+      if (!hit) throw new LspUnknownPayableAssetError(requested, accepted);
+      return { asset: hit, converted: isConverted(hit) };
+    }
+
+    if (accepted.length === 1) {
+      return { asset: accepted[0], converted: isConverted(accepted[0]) };
+    }
+    if (prefer === 'payout' && payoutAsset) {
+      return { asset: payoutAsset, converted: false };
+    }
+    if (prefer === 'convertible') {
+      if (convertible.length === 1) {
+        return { asset: convertible[0], converted: true };
+      }
+      // Nothing to convert to: fall back rather than refuse — "prefer" is a
+      // preference, and the payout asset is still payable.
+      if (!convertible.length && payoutAsset) {
+        return { asset: payoutAsset, converted: false };
+      }
+    }
+    throw new LspAmbiguousPayableAssetError(
+      prefer === 'payout' ? accepted : convertible,
+      prefer
+    );
+  }
+
+  /**
+   * This wallet's own LSP-assigned Lightning Address.
+   *
+   * `context` only names the caller in the "not unlocked" message — the pubkey
+   * is what the LSP keys the address account on, and there is none before
+   * unlock.
+   */
+  private async ownLightningAddress(
+    context: string
+  ): Promise<{ username: string; domain: string; address: string }> {
+    const nodeInfo = await this.wallet.getNodeInfo();
+    const pubkey = String(nodeInfo?.pubkey ?? '');
+    if (!pubkey) throw new Error(`${context}: wallet not unlocked`);
+    const addr = await this.resolveLightningAddress(pubkey);
+    return { ...addr, address: `${addr.username}@${addr.domain}` };
   }
 
   /**
@@ -513,7 +976,7 @@ export class UtexoLsp {
       await new Promise((r) => setTimeout(r, delayMs));
     }
     throw new Error(
-      `enableLightningAddress: LSP did not provision an address for ${pubkey} ` +
+      `LSP did not provision a Lightning Address for ${pubkey} ` +
         `(ensure the wallet is connected to the LSP). Last error: ${String(lastErr)}`
     );
   }
