@@ -147,10 +147,10 @@ describe('quoteExternalPayment', () => {
       converted: false,
     });
     const lsp = new UtexoLsp(
-      makeWallet(
-        [channel(BRIDGE, 1_000_000), channel(PAYOUT, 1_000_000)],
-        { ...HODL_DECODED, assetId: BRIDGE }
-      ),
+      makeWallet([channel(BRIDGE, 1_000_000), channel(PAYOUT, 1_000_000)], {
+        ...HODL_DECODED,
+        assetId: BRIDGE,
+      }),
       PEER
     );
 
@@ -163,7 +163,10 @@ describe('quoteExternalPayment', () => {
   // cross-asset MPP, so the whole amount has to fit in one.
   it('leaves the choice to the LSP when no channel can cover the amount', async () => {
     const bodies = mockLsp();
-    const lsp = new UtexoLsp(makeWallet([channel(PAYOUT, 1)], HODL_DECODED), PEER);
+    const lsp = new UtexoLsp(
+      makeWallet([channel(PAYOUT, 1)], HODL_DECODED),
+      PEER
+    );
 
     await lsp.quoteExternalPayment({ invoice: TARGET_INVOICE });
 
