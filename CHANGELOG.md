@@ -1,20 +1,28 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta.8
 
 ### Added
 
+- **`getInfo()` redesign** — now returns `apiVersion`, `network`, `host`/`port`,
+  `supportedAssets` (asset id, schema, ticker, name, `precision`), and channel/
+  payment size limits. Amounts are `bigint`: utexo-lsp sends u64 as decimal
+  strings, and `Number` silently corrupts values above 2^53. New type
+  `LspSupportedAsset`.
+- **`toUnitsBigInt` / `fromUnitsBigInt`** — bigint-safe counterparts to
+  `toUnitsNumber` / `fromUnitsNumber` for converting decimal amounts to/from
+  integer units at a given `precision`, for asset amounts beyond
+  `Number.MAX_SAFE_INTEGER`.
 - **`requestExternalInvoice()`** — quote a hosted BOLT11 for a payer that is not
-  this wallet. The LSP signs the invoice against a hash the receiver
-  pre-registered, so nothing in it names the payer and the RGB contract id and
-  amount ride inside the BOLT11: an APay-unaware RGB Lightning node can settle it
-  with a plain `POST /sendpayment`. The asset comes from LNURL discovery, not
-  from configuration — pass a **ticker** or a contract id as `asset`, or nothing
-  and let `prefer` (`'convertible'` by default) choose. Ambiguity throws
-  `LspAmbiguousPayableAssetError` rather than being guessed: the quote pins one
-  asset for the life of the invoice, and an external payer holding the other one
-  finds out only by failing to pay. New types `RequestExternalInvoiceOptions`,
-  `ExternalInvoice`.
+  this wallet. The LSP signs it against a hash the receiver pre-registered, so
+  nothing names the payer and the RGB contract id and amount ride inside the
+  BOLT11: an APay-unaware RGB Lightning node can settle it with a plain
+  `POST /sendpayment`. The asset comes from LNURL discovery rather than
+  configuration — pass a **ticker** or a contract id as `asset`, or nothing and
+  let `prefer` (`'convertible'` by default) choose. More than one match throws
+  `LspAmbiguousPayableAssetError` instead of being guessed, since the quote pins
+  one asset for the life of the invoice. New types
+  `RequestExternalInvoiceOptions`, `ExternalInvoice`.
 - **`listPayableAssets()`** — the same menu on its own: an address's payout asset
   and the assets the LSP converts to it 1:1, with tickers and precisions, so a UI
   can offer a picker with no configuration. Reads LNURL discovery rather than
@@ -24,8 +32,22 @@
 - **`quoteAddress()`** — everything `payAddress` does except paying. `payAddress`
   now delegates to it; its behaviour is unchanged. New type `AddressQuote`,
   which also surfaces the LSP's APay `proof` (and with it the payment hash).
+- **`payExternalInvoice()` / `quoteExternalPayment()` / `externalPaymentStatus()`
+  — `POST /lightning_send`.** Pay a third party's ordinary BOLT11 out of an asset
+  this wallet does not hold. The LSP returns a HODL invoice carrying *that
+  invoice's own payment hash*, which is the atomicity: it can claim what this
+  wallet pays only with a preimage the third party releases on being paid. The
+  SDK decodes the returned BOLT11 on this wallet's own node and throws
+  `LspQuoteMismatchError` unless the hash, the assets and the amounts match what
+  the LSP reported — before anything is paid. Omitting `payWith` picks the
+  channel that can cover the amount, preferring the delivery asset itself.
+  `maxFeeMsat` defaults to 0. New types `PayExternalInvoiceOptions`,
+  `ExternalPaymentQuote`, `LspLightningSend*`.
+- `ILspWallet.decodeLnInvoice()` — required by the verification above, so a
+  wallet backing `UtexoLsp` must now expose it. Both platform wallets already do.
 - New errors `LspNoPayableAssetError`, `LspUnknownPayableAssetError`,
-  `LspAmbiguousPayableAssetError`.
+  `LspAmbiguousPayableAssetError`, `LspInsufficientAssetLiquidityError`,
+  `LspQuoteMismatchError`.
 
 ### Changed
 
@@ -53,22 +75,6 @@
   passing `onEachPoll: () => mine(1)` — or one that refreshes a counterparty so a
   transfer can be acknowledged and broadcast — got a loop that only observed, and
   therefore a timeout that no amount of waiting would have resolved.
-
-## 1.0.0-beta.8
-
-### Added
-
-- **`getInfo()` redesign** — now returns `apiVersion`, `network`, `host`/`port`,
-  `supportedAssets` (asset id, schema, ticker, name, `precision`), and channel/
-  payment size limits. Amounts are `bigint`: utexo-lsp sends u64 as decimal
-  strings, and `Number` silently corrupts values above 2^53. New type
-  `LspSupportedAsset`.
-- **`toUnitsBigInt` / `fromUnitsBigInt`** — bigint-safe counterparts to
-  `toUnitsNumber` / `fromUnitsNumber` for converting decimal amounts to/from
-  integer units at a given `precision`, for asset amounts beyond
-  `Number.MAX_SAFE_INTEGER`.
-
-### Fixed
 
 - A malformed u64 string in a `get_info` response now raises a descriptive
   `LspError` instead of a bare `SyntaxError`.

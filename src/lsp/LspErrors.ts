@@ -1,7 +1,7 @@
 import type { RlnInvoiceStatus } from '../rln/status';
 import type { LspSupportedAsset, ReceiveStatus } from './lsp-types';
 
-/** `assetId`, `ticker` or `assetId (ticker)` — however much the LSP told us. */
+/** `assetId (ticker)` when the LSP sent a ticker, plain `assetId` otherwise. */
 function describeAsset(a: LspSupportedAsset): string {
   return a.ticker ? `${a.ticker} (${a.assetId})` : a.assetId;
 }
@@ -58,13 +58,12 @@ export class LspSettlementError extends Error {
 }
 
 /**
- * No asset this address accepts has enough local outbound liquidity to cover the
- * payment.
+ * No asset this address accepts has enough local outbound liquidity.
  *
  * Raised by `selectPaymentAsset` before anything is quoted, so no hash is spent
- * from the receiver's APay batch. `candidates` lists every asset that was
- * considered, with the local amount found for each — that is the difference
- * between "wrong asset" and "right asset, short balance".
+ * from the receiver's APay batch. `candidates` carries the local amount found
+ * per asset, so callers can tell "wrong asset" from "right asset, short
+ * balance".
  */
 export class LspInsufficientAssetLiquidityError extends Error {
   readonly name = 'LspInsufficientAssetLiquidityError';
@@ -84,8 +83,8 @@ export class LspInsufficientAssetLiquidityError extends Error {
 /**
  * The address advertises nothing payable: no payout asset and no accepted asset.
  *
- * Means the receiver has no usable asset channel with the LSP yet (discovery
- * derives both fields from that channel), not that the request was malformed.
+ * Discovery derives both fields from the receiver's asset channel, so this means
+ * the receiver has no usable channel yet — not that the request was malformed.
  */
 export class LspNoPayableAssetError extends Error {
   readonly name = 'LspNoPayableAssetError';
@@ -100,9 +99,8 @@ export class LspNoPayableAssetError extends Error {
 /**
  * The asset asked for is not one this address can be paid in.
  *
- * `requested` is whatever the caller passed — a contract id or a ticker — and
- * `accepted` is the menu discovery advertised, so the message can name the
- * alternatives rather than just refusing.
+ * `requested` is what the caller passed (contract id or ticker), `accepted` what
+ * discovery advertised, so the message can name the alternatives.
  */
 export class LspUnknownPayableAssetError extends Error {
   readonly name = 'LspUnknownPayableAssetError';
@@ -120,9 +118,9 @@ export class LspUnknownPayableAssetError extends Error {
 /**
  * More than one asset fits and the caller named none.
  *
- * Thrown rather than guessed: the invoice pins one asset for its lifetime, and
- * an external payer that holds the other one can only discover the mismatch by
- * failing to pay. Pass `asset` (ticker or contract id) to resolve it.
+ * Not guessed, because the quote pins one asset for the invoice's lifetime and
+ * an external payer holding the other one only finds out by failing to pay. Pass
+ * `asset` (ticker or contract id) to resolve it.
  */
 export class LspAmbiguousPayableAssetError extends Error {
   readonly name = 'LspAmbiguousPayableAssetError';
@@ -155,5 +153,21 @@ export class LspAmountOutOfRangeError extends Error {
       `amount ${amtMsat} msat is outside LNURL sendable range ` +
         `[${minSendable}, ${maxSendable}]`
     );
+  }
+}
+
+/**
+ * A `/lightning_send` quote whose two legs are not bound together as the LSP
+ * described them.
+ *
+ * Thrown before anything is paid. Its own type because it is the one failure in
+ * that flow that would have cost the payment rather than a retry — most of all
+ * when the payment hash does not match the invoice being relayed, which leaves
+ * an inbound invoice the LSP can claim without delivering anything.
+ */
+export class LspQuoteMismatchError extends Error {
+  readonly name = 'LspQuoteMismatchError';
+  constructor(reason: string) {
+    super(`refusing the relay quote: ${reason}`);
   }
 }

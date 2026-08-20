@@ -5,6 +5,9 @@ import type {
   LspOnchainSendResponse,
   LspLightningReceiveRequest,
   LspLightningReceiveResponse,
+  LspLightningSendRequest,
+  LspLightningSendResponse,
+  LspLightningSendStatusResponse,
   LspLnurlpCallbackResponse,
   LspLnurlpDiscovery,
 } from './lsp-types';
@@ -55,4 +58,14 @@ export interface IUtexoLSPClient {
   lightningReceive(
     params: LspLightningReceiveRequest
   ): Promise<LspLightningReceiveResponse>;
+
+  /** Lightning → Lightning across assets: submit a third party's BOLT11; get a HODL invoice to pay. */
+  lightningSend(
+    params: LspLightningSendRequest
+  ): Promise<LspLightningSendResponse>;
+
+  /** Progress of a `lightningSend` relay. */
+  lightningSendStatus(
+    paymentHash: string
+  ): Promise<LspLightningSendStatusResponse>;
 }

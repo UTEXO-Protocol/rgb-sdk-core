@@ -150,6 +150,89 @@ export interface LspLightningReceiveWire {
   converted?: boolean;
 }
 
+/**
+ * `POST /lightning_send` — ask the LSP to pay a third party's BOLT11 out of an
+ * asset this wallet does not hold.
+ *
+ * Mirrors `/lightning_receive`: the caller supplies the delivery leg and gets
+ * back the funding leg, only here the delivery goes to someone else.
+ */
+export interface LspLightningSendRequest {
+  /** The third party's BOLT11. It fixes payee, asset, both amounts and the hash. */
+  invoice: string;
+  /**
+   * Asset to be invoiced in. Omit to let the LSP resolve the counterpart from
+   * its own `CONVERTIBLE_PAIRS`, which only works when there is exactly one.
+   */
+  payWithAssetId?: string;
+}
+
+/** One side of a `/lightning_send` relay. */
+export interface LspLightningSendLeg {
+  assetId?: string;
+  assetAmount?: number;
+  amtMsat: number;
+  payeePubkey?: string;
+}
+
+export interface LspLightningSendResponse {
+  /**
+   * The HODL BOLT11 to pay. Its payment hash equals the third party invoice's —
+   * verify that before paying, since it is the whole atomicity guarantee.
+   */
+  lnInvoice: string;
+  paymentHash: string;
+  inbound: LspLightningSendLeg;
+  outbound: LspLightningSendLeg;
+  /** `true` when the two legs carry different assets (LSP converts 1:1). */
+  converted: boolean;
+  /** Added to the delivery leg's msat when quoting; 0 relays at cost. */
+  feeMsat: number;
+  /** Unix seconds after which the HODL invoice can no longer be paid. */
+  expiresAt: number;
+}
+
+/** Lifecycle of one relay, as reported by `GET /lightning_send/{hash}`. */
+export type LspLightningSendStatus =
+  | 'quoted'
+  | 'claimable'
+  | 'outbound_pending'
+  | 'outbound_paid'
+  | 'outbound_claimed'
+  | 'settled'
+  | 'cancelled'
+  | 'failed';
+
+export interface LspLightningSendStatusResponse {
+  paymentHash: string;
+  status: LspLightningSendStatus;
+  reason?: string;
+}
+
+/** Raw wire shape returned by utexo-lsp `/lightning_send` (snake_case keys). */
+export interface LspLightningSendWire {
+  ln_invoice: string;
+  payment_hash: string;
+  inbound: LspLightningSendLegWire;
+  outbound: LspLightningSendLegWire;
+  converted?: boolean;
+  fee_msat?: number;
+  expires_at?: number;
+}
+
+export interface LspLightningSendLegWire {
+  asset_id?: string;
+  asset_amount?: number;
+  amt_msat?: number;
+  payee_pubkey?: string;
+}
+
+export interface LspLightningSendStatusWire {
+  payment_hash: string;
+  status: LspLightningSendStatus;
+  reason?: string;
+}
+
 /** Raw wire shape returned by utexo-lsp `/onchain_send` (snake_case keys). */
 export interface LspOnchainSendWire {
   ln_invoice: string;
@@ -195,9 +278,9 @@ export interface LspLnurlpDiscovery {
   payoutAsset?: LspSupportedAsset;
   /**
    * What the callback will quote: the payout asset plus every asset the LSP
-   * accepts and converts to it 1:1 (a pair its operator declared). The payer's wallet picks
-   * from this — the callback is unauthenticated, so at quote time the LSP does
-   * not know whose channels to look at and cannot choose for it.
+   * accepts and converts to it 1:1. The payer's wallet picks from this — the
+   * callback is unauthenticated, so at quote time the LSP does not know whose
+   * channels to look at.
    */
   acceptedAssets?: LspSupportedAsset[];
 }

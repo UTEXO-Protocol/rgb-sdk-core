@@ -16,6 +16,7 @@ import type {
   LightningPayment,
   ApayNewResponse,
   HodlInvoiceResult,
+  DecodedLnInvoice,
 } from '../rln/model';
 import type { RlnInvoiceStatus } from '../rln/status';
 import type {
@@ -44,6 +45,15 @@ export interface ILspWallet {
   payLightningInvoice(
     params: PayLightningInvoiceRequestModel
   ): Promise<LightningSendRequest>;
+
+  /**
+   * Decode a BOLT11 locally.
+   *
+   * `payExternalInvoice` needs it: the LSP signs the invoice it hands back, and
+   * only the payer's own node can confirm it carries the third party's payment
+   * hash — the one thing that flow does not have to trust the LSP for.
+   */
+  decodeLnInvoice(invoice: string): Promise<DecodedLnInvoice>;
 
   /** Reveal the preimage to claim an inbound HODL payment. */
   claimHodlInvoice(

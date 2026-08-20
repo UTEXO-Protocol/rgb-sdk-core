@@ -9,6 +9,13 @@ import type {
   LspLightningReceiveRequest,
   LspLightningReceiveResponse,
   LspLightningReceiveWire,
+  LspLightningSendRequest,
+  LspLightningSendResponse,
+  LspLightningSendWire,
+  LspLightningSendLeg,
+  LspLightningSendLegWire,
+  LspLightningSendStatusResponse,
+  LspLightningSendStatusWire,
   LspLightningAddressByPubkeyResponse,
   LspLightningAddressByPubkeyWire,
   LspLnurlpCallbackResponse,
@@ -66,9 +73,9 @@ function mapSupportedAsset(a: LspSupportedAssetWire): LspSupportedAsset {
 
 /**
  * LNURL discovery, with the asset fields mapped. `payout_asset` /
- * `accepted_assets` are absent on an LSP that predates them, so both stay
- * `undefined` rather than becoming empty arrays — "no field" and "no asset
- * channel yet" are different answers, and callers must not confuse them.
+ * `accepted_assets` stay `undefined` rather than becoming empty arrays when
+ * absent: an LSP that predates the fields and a receiver with no asset channel
+ * yet are different answers.
  */
 export function mapLnurlpDiscovery(
   raw: LspLnurlpDiscoveryWire
@@ -154,8 +161,8 @@ function snakeCaseRgbParams(
     min_confirmations: rgb.minConfirmations ?? 1,
     witness: !!rgb.witness,
   };
-  // Sent only when named: an absent asset_id is what asks the LSP to resolve the
-  // on-chain leg itself, so it must not go out as an explicit null.
+  // Only sent when named — an absent asset_id is what asks the LSP to resolve
+  // the on-chain leg itself, so it must not go out as an explicit null.
   if (rgb.assetId !== undefined) out.asset_id = rgb.assetId;
   if (rgb.assignment !== undefined) out.assignment = rgb.assignment;
   if (rgb.durationSeconds !== undefined)
@@ -286,9 +293,8 @@ export class UtexoLSPClient implements IUtexoLSPClient {
    */
   /**
    * LUD-06 discovery only (`GET <baseUrl>/.well-known/lnurlp/<username>`), with
-   * no callback hop. Read it when the payer has to decide *what* to pay with:
-   * `payoutAsset` is what the receiver is delivered, `acceptedAssets` what the
-   * callback will quote.
+   * no callback hop. Read it to decide what to pay with: `payoutAsset` is what
+   * the receiver is delivered, `acceptedAssets` what the callback will quote.
    *
    * Same scoping caveat as {@link resolveAddress} — this asks OUR LSP about its
    * own user of that name.
@@ -428,4 +434,59 @@ export class UtexoLSPClient implements IUtexoLSPClient {
       converted: raw.converted,
     };
   }
+
+  /**
+   * Lightning → Lightning across two assets: hand the LSP a third party's BOLT11
+   * and get back a HODL invoice denominated in an asset this wallet actually
+   * holds. Paying it makes the LSP pay the third party.
+   *
+   * The response's `paymentHash` should equal the third party invoice's own
+   * hash, so the LSP cannot claim the payment without the preimage only that
+   * third party releases. Check it — that check is the atomicity.
+   */
+  async lightningSend(
+    params: LspLightningSendRequest
+  ): Promise<LspLightningSendResponse> {
+    const body: Record<string, unknown> = { invoice: params.invoice };
+    if (params.payWithAssetId) body.pay_with_asset_id = params.payWithAssetId;
+
+    const raw = await this.request<LspLightningSendWire>('/lightning_send', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return {
+      lnInvoice: raw.ln_invoice,
+      paymentHash: raw.payment_hash,
+      inbound: mapLightningSendLeg(raw.inbound),
+      outbound: mapLightningSendLeg(raw.outbound),
+      converted: raw.converted ?? false,
+      feeMsat: raw.fee_msat ?? 0,
+      expiresAt: raw.expires_at ?? 0,
+    };
+  }
+
+  /** Where a `/lightning_send` relay has got to. */
+  async lightningSendStatus(
+    paymentHash: string
+  ): Promise<LspLightningSendStatusResponse> {
+    const raw = await this.request<LspLightningSendStatusWire>(
+      `/lightning_send/${encodeURIComponent(paymentHash)}`
+    );
+    return {
+      paymentHash: raw.payment_hash,
+      status: raw.status,
+      reason: raw.reason,
+    };
+  }
+}
+
+function mapLightningSendLeg(
+  raw: LspLightningSendLegWire | undefined
+): LspLightningSendLeg {
+  return {
+    assetId: raw?.asset_id,
+    assetAmount: raw?.asset_amount,
+    amtMsat: raw?.amt_msat ?? 0,
+    payeePubkey: raw?.payee_pubkey,
+  };
 }
