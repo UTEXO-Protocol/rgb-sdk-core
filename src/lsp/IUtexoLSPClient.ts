@@ -5,11 +5,21 @@ import type {
   LspOnchainSendResponse,
   LspLightningReceiveRequest,
   LspLightningReceiveResponse,
+  LspLightningSendRequest,
+  LspLightningSendResponse,
+  LspLightningSendStatusResponse,
   LspLnurlpCallbackResponse,
+  LspLnurlpDiscovery,
 } from './lsp-types';
 
 export interface IUtexoLSPClient {
   getInfo(): Promise<LspGetInfoResponse>;
+
+  /**
+   * LUD-06 discovery without the callback hop — the payer reads `payoutAsset` /
+   * `acceptedAssets` from it to decide which asset to be quoted in.
+   */
+  discoverAddress(username: string): Promise<LspLnurlpDiscovery>;
 
   /**
    * Full LUD-06 resolution: discovers callback URL from LNURL metadata then
@@ -48,4 +58,14 @@ export interface IUtexoLSPClient {
   lightningReceive(
     params: LspLightningReceiveRequest
   ): Promise<LspLightningReceiveResponse>;
+
+  /** Lightning → Lightning across assets: submit a third party's BOLT11; get a HODL invoice to pay. */
+  lightningSend(
+    params: LspLightningSendRequest
+  ): Promise<LspLightningSendResponse>;
+
+  /** Progress of a `lightningSend` relay. */
+  lightningSendStatus(
+    paymentHash: string
+  ): Promise<LspLightningSendStatusResponse>;
 }

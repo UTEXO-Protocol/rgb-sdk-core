@@ -13,8 +13,68 @@
   `toUnitsNumber` / `fromUnitsNumber` for converting decimal amounts to/from
   integer units at a given `precision`, for asset amounts beyond
   `Number.MAX_SAFE_INTEGER`.
+- **`requestExternalInvoice()`** — quote a hosted BOLT11 for a payer that is not
+  this wallet. The LSP signs it against a hash the receiver pre-registered, so
+  nothing names the payer and the RGB contract id and amount ride inside the
+  BOLT11: an APay-unaware RGB Lightning node can settle it with a plain
+  `POST /sendpayment`. The asset comes from LNURL discovery rather than
+  configuration — pass a **ticker** or a contract id as `asset`, or nothing and
+  let `prefer` (`'convertible'` by default) choose. More than one match throws
+  `LspAmbiguousPayableAssetError` instead of being guessed, since the quote pins
+  one asset for the life of the invoice. New types
+  `RequestExternalInvoiceOptions`, `ExternalInvoice`.
+- **`listPayableAssets()`** — the same menu on its own: an address's payout asset
+  and the assets the LSP converts to it 1:1, with tickers and precisions, so a UI
+  can offer a picker with no configuration. Reads LNURL discovery rather than
+  `/get_info`, whose `supportedAssets` is the LSP-wide served set and excludes
+  the convertible assets it accepts but never provisions. New type
+  `PayableAssets`.
+- **`quoteAddress()`** — everything `payAddress` does except paying. `payAddress`
+  now delegates to it; its behaviour is unchanged. New type `AddressQuote`,
+  which also surfaces the LSP's APay `proof` (and with it the payment hash).
+- **`payExternalInvoice()` / `quoteExternalPayment()` / `externalPaymentStatus()`
+  — `POST /lightning_send`.** Pay a third party's ordinary BOLT11 out of an asset
+  this wallet does not hold. The LSP returns a HODL invoice carrying *that
+  invoice's own payment hash*, which is the atomicity: it can claim what this
+  wallet pays only with a preimage the third party releases on being paid. The
+  SDK decodes the returned BOLT11 on this wallet's own node and throws
+  `LspQuoteMismatchError` unless the hash, the assets and the amounts match what
+  the LSP reported — before anything is paid. Omitting `payWith` picks the
+  channel that can cover the amount, preferring the delivery asset itself.
+  `maxFeeMsat` defaults to 0. New types `PayExternalInvoiceOptions`,
+  `ExternalPaymentQuote`, `LspLightningSend*`.
+- `ILspWallet.decodeLnInvoice()` — required by the verification above, so a
+  wallet backing `UtexoLsp` must now expose it. Both platform wallets already do.
+- New errors `LspNoPayableAssetError`, `LspUnknownPayableAssetError`,
+  `LspAmbiguousPayableAssetError`, `LspInsufficientAssetLiquidityError`,
+  `LspQuoteMismatchError`.
+
+### Changed
+
+- **`receiveAsset()` no longer sends `rgb_invoice.asset_id` by default.** The
+  receiver names only what it is paid in over Lightning; the LSP resolves the
+  on-chain asset from its own `CONVERTIBLE_PAIRS`, so a sender can pay in the
+  canonical asset it already holds without its contract id being configured
+  client-side. The resolved value comes back as `onchainAssetId`, with
+  `converted` saying whether the two legs differ. Pass
+  `onchainAsset: 'payout'` for the previous one-asset-end-to-end behaviour.
+  With no pair declared for the asset, both modes are identical.
+
+  **Requires utexo-lsp with convertible `/lightning_receive`** — older builds
+  reject a request without `rgb_invoice.asset_id`. Pin `onchainAsset: 'payout'`
+  when talking to one.
+
+- `LspRgbParams.assetId` is now optional, and the client omits the key entirely
+  rather than sending an explicit null.
 
 ### Fixed
+
+- **`awaitReceiveSettlement` and `waitForOutboundLiquidity` now honour
+  `WaitOptions.onEachPoll`.** It is documented as running at the start of every
+  poll iteration, but only `waitForChannel` ever called it. A regtest caller
+  passing `onEachPoll: () => mine(1)` — or one that refreshes a counterparty so a
+  transfer can be acknowledged and broadcast — got a loop that only observed, and
+  therefore a timeout that no amount of waiting would have resolved.
 
 - A malformed u64 string in a `get_info` response now raises a descriptive
   `LspError` instead of a bare `SyntaxError`.

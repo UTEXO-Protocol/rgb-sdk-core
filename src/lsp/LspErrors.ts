@@ -1,5 +1,10 @@
 import type { RlnInvoiceStatus } from '../rln/status';
-import type { ReceiveStatus } from './lsp-types';
+import type { LspSupportedAsset, ReceiveStatus } from './lsp-types';
+
+/** `assetId (ticker)` when the LSP sent a ticker, plain `assetId` otherwise. */
+function describeAsset(a: LspSupportedAsset): string {
+  return a.ticker ? `${a.ticker} (${a.assetId})` : a.assetId;
+}
 
 /** No usable RGB channel appeared with the LSP peer before the timeout. */
 export class LspChannelTimeoutError extends Error {
@@ -53,6 +58,85 @@ export class LspSettlementError extends Error {
 }
 
 /**
+ * No asset this address accepts has enough local outbound liquidity.
+ *
+ * Raised by `selectPaymentAsset` before anything is quoted, so no hash is spent
+ * from the receiver's APay batch. `candidates` carries the local amount found
+ * per asset, so callers can tell "wrong asset" from "right asset, short
+ * balance".
+ */
+export class LspInsufficientAssetLiquidityError extends Error {
+  readonly name = 'LspInsufficientAssetLiquidityError';
+  constructor(
+    public readonly required: number,
+    public readonly candidates: { assetId: string; localAmount: number }[]
+  ) {
+    super(
+      candidates.length
+        ? `No accepted asset has ${required} spendable base units — ` +
+            candidates.map((c) => `${c.assetId}: ${c.localAmount}`).join(', ')
+        : `No accepted asset with a usable channel to pay ${required} base units`
+    );
+  }
+}
+
+/**
+ * The address advertises nothing payable: no payout asset and no accepted asset.
+ *
+ * Discovery derives both fields from the receiver's asset channel, so this means
+ * the receiver has no usable channel yet — not that the request was malformed.
+ */
+export class LspNoPayableAssetError extends Error {
+  readonly name = 'LspNoPayableAssetError';
+  constructor(public readonly address: string) {
+    super(
+      `${address} advertises no payable asset — its receiver has no usable ` +
+        `asset channel with the LSP yet`
+    );
+  }
+}
+
+/**
+ * The asset asked for is not one this address can be paid in.
+ *
+ * `requested` is what the caller passed (contract id or ticker), `accepted` what
+ * discovery advertised, so the message can name the alternatives.
+ */
+export class LspUnknownPayableAssetError extends Error {
+  readonly name = 'LspUnknownPayableAssetError';
+  constructor(
+    public readonly requested: string,
+    public readonly accepted: LspSupportedAsset[]
+  ) {
+    super(
+      `"${requested}" is not payable to this address — accepted: ` +
+        (accepted.map(describeAsset).join(', ') || 'none')
+    );
+  }
+}
+
+/**
+ * More than one asset fits and the caller named none.
+ *
+ * Not guessed, because the quote pins one asset for the invoice's lifetime and
+ * an external payer holding the other one only finds out by failing to pay. Pass
+ * `asset` (ticker or contract id) to resolve it.
+ */
+export class LspAmbiguousPayableAssetError extends Error {
+  readonly name = 'LspAmbiguousPayableAssetError';
+  constructor(
+    public readonly candidates: LspSupportedAsset[],
+    public readonly prefer: 'payout' | 'convertible'
+  ) {
+    super(
+      `${candidates.length} assets match prefer="${prefer}" — pass asset ` +
+        `(ticker or contract id) to pick one of: ` +
+        candidates.map(describeAsset).join(', ')
+    );
+  }
+}
+
+/**
  * LNURL-pay amount is outside the discovery-advertised sendable range.
  *
  * Thrown client-side before `/pay/callback` so callers get a clear range
@@ -69,5 +153,21 @@ export class LspAmountOutOfRangeError extends Error {
       `amount ${amtMsat} msat is outside LNURL sendable range ` +
         `[${minSendable}, ${maxSendable}]`
     );
+  }
+}
+
+/**
+ * A `/lightning_send` quote whose two legs are not bound together as the LSP
+ * described them.
+ *
+ * Thrown before anything is paid. Its own type because it is the one failure in
+ * that flow that would have cost the payment rather than a retry — most of all
+ * when the payment hash does not match the invoice being relayed, which leaves
+ * an inbound invoice the LSP can claim without delivering anything.
+ */
+export class LspQuoteMismatchError extends Error {
+  readonly name = 'LspQuoteMismatchError';
+  constructor(reason: string) {
+    super(`refusing the relay quote: ${reason}`);
   }
 }
