@@ -248,6 +248,7 @@ export interface Transfer {
 export type TransferStatus =
   | 'WaitingCounterparty'
   | 'WaitingSafeHeight'
+  | 'WaitingBroadcast'
   | 'WaitingConfirmations'
   | 'Settled'
   | 'Failed'

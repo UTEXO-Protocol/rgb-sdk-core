@@ -105,6 +105,8 @@ export interface DecodedLnInvoice {
   expirySeconds?: number;
   timestamp?: number;
   description?: string;
+  /** SHA-256 description hash from a BOLT11 invoice, when present. */
+  descriptionHash?: string;
   /** Payee node pubkey. */
   payee?: string;
   paymentSecret?: string;

@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.0-beta.9
+
+### Added
+
+- **`WaitingBroadcast`** in the shared `TransferStatus` union. Consumers with
+  exhaustive status handling should include this state.
+- **`normalizeTransferStatus(raw)`** — converts known transfer status strings to
+  canonical PascalCase, including `WAITING_BROADCAST` and `waitingBroadcast`.
+  Throws `ValidationError` for unknown or invalid values instead of substituting
+  a valid status. This is a pure, platform-independent utility.
+- Optional **`DecodedLnInvoice.descriptionHash`** for the SHA-256 description
+  hash carried by a BOLT11 invoice.
+
+### Compatibility
+
+- The shared **`refreshWallet(): Promise<void>`** contract is unchanged for web
+  and React Native. The detailed `refreshTransfers()` method and its result
+  types are RN SDK extensions and are not part of core.
+
 ## 1.0.0-beta.8
 
 ### Added
