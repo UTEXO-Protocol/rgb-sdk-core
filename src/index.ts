@@ -3,6 +3,7 @@
 
 // Types
 export * from './types/wallet-model';
+export { normalizeTransferStatus } from './types/transfer-status';
 
 // Crypto types (Network, NetworkVersions, BIP32Interface, etc.)
 export type {
