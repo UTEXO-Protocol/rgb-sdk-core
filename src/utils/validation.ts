@@ -1,6 +1,7 @@
 import { ValidationError } from '../errors';
 import type { Network } from '../crypto/types';
 import { NETWORK_MAP } from '../constants';
+import type { BurnParams } from '../types/engine-model';
 
 const VALID_NETWORKS: Network[] = [
   'mainnet',
@@ -118,4 +119,63 @@ export function validateString(
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new ValidationError(`${field} must be a non-empty string`, field);
   }
+}
+
+const MAX_U64 = 18446744073709551615n;
+
+function isAssetId(value: unknown): value is string {
+  return (
+    typeof value === 'string' && value.startsWith('rgb:') && value.length <= 256
+  );
+}
+
+/**
+ * Checks a burn request before an engine or WebRGB sees it. Throws
+ * `ValidationError` with the field that is invalid.
+ */
+export function validateBurnParams(params: BurnParams): void {
+  if (!params || !isAssetId(params.assetId))
+    throw new ValidationError('Invalid assetId', 'assetId');
+  if (
+    typeof params.amount !== 'string' ||
+    !/^[1-9][0-9]{0,19}$/.test(params.amount) ||
+    BigInt(params.amount) > MAX_U64
+  )
+    throw new ValidationError(
+      'Burn amount must be a positive u64 decimal string',
+      'amount'
+    );
+  if (
+    params.burnRecipient !== undefined &&
+    !/^[a-fA-F0-9]{64}$/.test(params.burnRecipient)
+  )
+    throw new ValidationError(
+      'burnRecipient must be 32-byte hex without 0x',
+      'burnRecipient'
+    );
+  if (!Number.isSafeInteger(params.feeRate) || params.feeRate < 1)
+    throw new ValidationError(
+      'feeRate must be a positive safe integer in sat/vB',
+      'feeRate'
+    );
+  if (
+    !Number.isInteger(params.minConfirmations) ||
+    params.minConfirmations < 1 ||
+    params.minConfirmations > 255
+  )
+    throw new ValidationError(
+      'minConfirmations must be between 1 and 255',
+      'minConfirmations'
+    );
+}
+
+/**
+ * Checks the arguments of a consignment lookup (`assetId`, `txid`). Throws
+ * `ValidationError` with the field that is invalid.
+ */
+export function validateConsignmentLookup(assetId: string, txid: string): void {
+  if (!isAssetId(assetId))
+    throw new ValidationError('Invalid assetId or txid', 'assetId');
+  if (typeof txid !== 'string' || !/^[a-fA-F0-9]{64}$/.test(txid))
+    throw new ValidationError('Invalid assetId or txid', 'txid');
 }

@@ -45,6 +45,8 @@ export {
   validateHex,
   validateRequired,
   validateString,
+  validateBurnParams,
+  validateConsignmentLookup,
 } from './utils/validation';
 export { isNetwork } from './utils/network';
 export {
