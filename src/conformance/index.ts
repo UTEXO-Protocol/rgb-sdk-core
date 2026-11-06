@@ -27,6 +27,8 @@
  * back to the globals Jest and Vitest both provide.
  */
 
+import { resolveRunner } from './runner';
+import type { RunnerBindings } from './runner';
 import {
   normalizeInvoiceStatus,
   normalizePaymentStatus,
@@ -195,14 +197,7 @@ export const CANONICAL_CHANNEL_STATUSES = [
 
 // ── Runner plumbing ──────────────────────────────────────────────────────────
 
-type ItFn = (name: string, fn: () => void | Promise<void>) => void;
-type DescribeFn = (name: string, fn: () => void) => void;
-type ExpectFn = (actual: unknown) => {
-  toBe(expected: unknown): void;
-  toContain(expected: unknown): void;
-};
-
-export interface ConformanceOptions {
+export interface ConformanceOptions extends RunnerBindings {
   /** Package name, used in the test titles. */
   name: string;
   /**
@@ -223,29 +218,12 @@ export interface ConformanceOptions {
    * unverified.
    */
   createWalletSync?: () => Record<string, unknown>;
-  describe?: DescribeFn;
-  it?: ItFn;
-  expect?: ExpectFn;
-}
-
-function resolveRunner(opts: ConformanceOptions) {
-  const g = globalThis as unknown as Record<string, unknown>;
-  const describe = opts.describe ?? (g.describe as DescribeFn | undefined);
-  const it = opts.it ?? (g.it as ItFn | undefined);
-  const expect = opts.expect ?? (g.expect as ExpectFn | undefined);
-  if (!describe || !it || !expect) {
-    throw new Error(
-      'runConformanceChecks: no test runner found. Pass { describe, it, expect } ' +
-        'explicitly, or run inside Jest/Vitest where they are global.'
-    );
-  }
-  return { describe, it, expect };
 }
 
 // ── The suite ────────────────────────────────────────────────────────────────
 
 export function runConformanceChecks(opts: ConformanceOptions): void {
-  const { describe, it, expect } = resolveRunner(opts);
+  const { describe, it, expect } = resolveRunner('runConformanceChecks', opts);
 
   describe(`${opts.name} — IUTEXOProtocol conformance`, () => {
     describe('surface', () => {
@@ -454,3 +432,12 @@ export {
   HEX_PUBKEY,
 } from './field-checks';
 export type { FieldSpec, FieldsSpec, FieldType } from './field-checks';
+
+// ── Engine contract (SharedWalletApi) ────────────────────────────────────────
+export {
+  runEngineConformanceChecks,
+  SHARED_WALLET_METHODS,
+  ENGINE_EXTENSIONS,
+  ENGINE_CONTRACT_VERSION_UNDER_TEST,
+} from './engine';
+export type { EngineConformanceOptions, EngineExtensionName } from './engine';

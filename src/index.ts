@@ -98,6 +98,16 @@ export type {
   UTEXOWalletCreateParams,
 } from './interfaces/wallet';
 
+// The engine contract — base + extensions, next to the legacy IUTEXOProtocol.
+export type * from './types/engine-model';
+export type * from './interfaces/engine';
+export {
+  isEngineError,
+  assertEngineContract,
+  EngineContractError,
+} from './engine';
+export type { EngineError, SharedEngineErrorCode } from './engine';
+
 // VSS defaults
 export { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './utexo/config/vss';
 
