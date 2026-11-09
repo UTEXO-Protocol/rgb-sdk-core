@@ -22,4 +22,9 @@ export type {
   VssBackupApi,
   VssFenceApi,
   MessageSigningApi,
+  IndexerCheckApi,
+  AssetMetadataApi,
+  FileIssuanceApi,
+  TxidLookupApi,
+  AddressRotationApi,
 } from './extensions';

@@ -22,6 +22,7 @@ import type {
   OnchainReceiveParams,
   ReadOptions,
   ReceiveParams,
+  RefreshTransfersResult,
   WalletIdentity,
   WalletInvoiceData,
   WalletListAssets,
@@ -120,7 +121,13 @@ export interface EngineHistoryApi {
   /** RGB on-chain transfer history. */
   listTransfers(assetId?: string): Promise<WalletTransfer[]>;
   listTransactions(options?: ReadOptions): Promise<Transaction[]>;
-  /** Refreshes transfer state. Kept distinct from `syncWallet()`. */
+  /**
+   * Refreshes pending transfers and reports what changed, keyed by batch
+   * transfer ID. Kept distinct from `syncWallet()`. `skipSync: true` skips the
+   * sync before the refresh.
+   */
+  refresh(options?: ReadOptions): Promise<RefreshTransfersResult>;
+  /** `refresh()` without the result. */
   refreshWallet(): Promise<void>;
   /** Syncs chain/wallet state. */
   syncWallet(): Promise<void>;

@@ -83,6 +83,7 @@ class FakeEngine
   onchainSend = notUsed;
   listTransfers = notUsed;
   listTransactions = notUsed;
+  refresh = notUsed;
   refreshWallet = notUsed;
   syncWallet = notUsed;
   shutdown = notUsed;

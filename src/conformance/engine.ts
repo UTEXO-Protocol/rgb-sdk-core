@@ -60,6 +60,7 @@ export const SHARED_WALLET_METHODS = [
   // history
   'listTransfers',
   'listTransactions',
+  'refresh',
   'refreshWallet',
   'syncWallet',
 ] as const;
@@ -75,6 +76,11 @@ export const ENGINE_EXTENSIONS = {
   vssBackup: ['backupNow'],
   vssFence: ['vssClearFence'],
   messageSigning: ['signMessage', 'verifyMessage'],
+  indexerCheck: ['checkIndexerUrl'],
+  assetMetadata: ['getAssetMetadata'],
+  fileIssuance: ['issueAssetCfa', 'issueAssetUda'],
+  txidLookup: ['listTransfersByTxid', 'listTransactionsByTxid'],
+  addressRotation: ['rotateVanillaAddress'],
 } as const;
 
 export type EngineExtensionName = keyof typeof ENGINE_EXTENSIONS;

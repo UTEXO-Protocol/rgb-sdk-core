@@ -11,11 +11,22 @@
  */
 
 import type {
+  AssetMetadata,
   BfaCapabilities,
   BurnParams,
   BurnResult,
+  IndexerUrlInfo,
+  IssueAssetCfaParams,
+  IssueAssetUdaParams,
+  ReadOptions,
+  WalletTransfer,
 } from '../../types/engine-model';
-import type { WalletBackupResponse } from '../../types/wallet-model';
+import type {
+  AssetCFA,
+  AssetUDA,
+  Transaction,
+  WalletBackupResponse,
+} from '../../types/wallet-model';
 
 /** Stop and reopen the same engine instance. */
 export interface RestartableWalletApi<TUnlockParams> {
@@ -82,4 +93,37 @@ export interface VssFenceApi {
 export interface MessageSigningApi {
   signMessage(message: string): Promise<string>;
   verifyMessage(message: string, signature: string): Promise<boolean>;
+}
+
+/** Probe an indexer URL before using it. */
+export interface IndexerCheckApi {
+  /** Detects the indexer protocol behind `url`. */
+  checkIndexerUrl(url: string): Promise<IndexerUrlInfo>;
+}
+
+/** Contract metadata of one asset. */
+export interface AssetMetadataApi {
+  getAssetMetadata(assetId: string): Promise<AssetMetadata>;
+}
+
+/** CFA and UDA issuance with media and attachments read from local files. */
+export interface FileIssuanceApi {
+  issueAssetCfa(params: IssueAssetCfaParams): Promise<AssetCFA>;
+  issueAssetUda(params: IssueAssetUdaParams): Promise<AssetUDA>;
+}
+
+/** History filtered by one Bitcoin transaction. */
+export interface TxidLookupApi {
+  /** RGB transfers whose witness transaction is `txid`. */
+  listTransfersByTxid(txid: string): Promise<WalletTransfer[]>;
+  /** Wallet transactions with this `txid` (zero or one). */
+  listTransactionsByTxid(
+    txid: string,
+    options?: ReadOptions
+  ): Promise<Transaction[]>;
+}
+
+/** A fresh vanilla (BTC) receive address. */
+export interface AddressRotationApi {
+  rotateVanillaAddress(): Promise<string>;
 }

@@ -188,3 +188,51 @@ export interface RefreshTransfersResult {
   /** Keys are batch transfer IDs, not the individual `Transfer.idx`. */
   transfers: Record<number, RefreshedTransfer>;
 }
+
+// ── Extension models ─────────────────────────────────────────────────────────
+
+/** `checkIndexerUrl()` result. */
+export interface IndexerUrlInfo {
+  /** Lowercase protocol name, e.g. `electrum` or `esplora`. */
+  indexerProtocol: string;
+}
+
+/** Contract metadata; supplies are exact u64 decimal strings. */
+export interface AssetMetadata {
+  assetSchema: AssetSchemaName;
+  name: string;
+  precision: number;
+  ticker?: string;
+  details?: string;
+  /** **Unix seconds**. */
+  timestamp: number;
+  initialSupply: string;
+  maxSupply: string;
+  knownCirculatingSupply: string;
+  /** RGB_L1 only. */
+  rejectListUrl?: string;
+  /** RGB_L1 only: the contract an IFA/BFA asset was linked from. */
+  linkedFromContract?: string;
+  /** RGB_L1 only: the contract an IFA/BFA asset was linked to. */
+  linkedToContract?: string;
+}
+
+export interface IssueAssetCfaParams {
+  name: string;
+  details?: string | null;
+  precision: number;
+  amounts: number[];
+  /** Local media file (absolute path or `file://` URI) attached to the contract. */
+  filePath?: string | null;
+}
+
+export interface IssueAssetUdaParams {
+  ticker: string;
+  name: string;
+  details?: string | null;
+  precision: number;
+  /** Local media file (absolute path or `file://` URI) for the token. */
+  mediaFilePath?: string | null;
+  /** Local attachment files. */
+  attachmentsFilePaths?: string[];
+}
