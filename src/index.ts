@@ -78,7 +78,6 @@ export {
 } from './utils/bip32-helpers';
 
 // Interfaces
-export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
 
 // The UTEXO protocol contract — domain groups + optional carriers.

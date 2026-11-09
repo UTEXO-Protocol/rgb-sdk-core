@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- `IRgbLibBinding`: the rgb-lib native binding shape belongs to the engine
+  (`@utexo/rgb-lib-rn`), not to the shared contract, and nothing imported it.
+
 ## 1.0.0-beta.9
 
 ### Added

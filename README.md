@@ -7,7 +7,7 @@ Shared core for RGB SDK — platform-agnostic interfaces, types, and business lo
 This package provides the common foundation used by the RGB SDK client libraries (`@utexo/rgb-sdk`, `@utexo/rgb-sdk-rn`, `@utexo/rgb-sdk-web`). It includes:
 
 - **Protocol contract** — `IUTEXOProtocol` and its domain groups (`ILightningNode`, `ILightningPayments`, `IAsyncPayments`, `IOnchainTransfers`, `IRgbAssets`, `IBitcoinWallet`) plus the optional carriers (`IPsbtSigning`, `IBeginEndFlows`)
-- **Bindings & signing** — `IRgbLibBinding`, `ISigner`, and the RLN model/interfaces
+- **Signing & RLN model** — `ISigner` and the RLN model/interfaces
 - **LSP flows** — `UtexoLsp`, `UtexoLSPClient` and their types (see below)
 - **Crypto utilities** — key derivation, PSBT helpers, message signing, VSS
 - **Types & validation** — wallet models, network constants, input validation
