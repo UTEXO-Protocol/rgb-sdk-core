@@ -1,11 +1,12 @@
 # @utexo/rgb-sdk-core
 
-Platform-agnostic core of the UTEXO RGB SDK: the wallet engine contract, shared types, key helpers, errors and the LSP client. It has no React Native, Node or browser dependencies.
+[![npm](https://img.shields.io/npm/v/@utexo/rgb-sdk-core)](https://www.npmjs.com/package/@utexo/rgb-sdk-core)
+[![license](https://img.shields.io/npm/l/@utexo/rgb-sdk-core)](https://www.npmjs.com/package/@utexo/rgb-sdk-core)
 
-Most apps do not install it alone. It is a peer dependency of:
+The shared core of the UTEXO RGB SDK: the wallet engine contract, types, errors, key helpers and the LSP client. Pure TypeScript with no React Native, Node or browser dependencies.
 
-- `@utexo/rgb-lib-rn`: the RGB_L1 engine for React Native (native rgb-lib);
-- `@utexo/rgb-sdk`: the `UTEXOWallet` facade over any engine.
+> [!TIP]
+> Building a wallet app? Start with [`@utexo/rgb-sdk`](https://www.npmjs.com/package/@utexo/rgb-sdk) and an engine such as [`@utexo/rgb-lib-rn`](https://www.npmjs.com/package/@utexo/rgb-lib-rn). They depend on this package and re-export what apps need. Install it directly to write an engine, share types, or use the key and LSP helpers.
 
 ## Installation
 
@@ -13,44 +14,59 @@ Most apps do not install it alone. It is a peer dependency of:
 npm install @utexo/rgb-sdk-core
 ```
 
-## What it contains
+## What's inside
 
-- **Engine contract.** `SharedWalletApi`, the API every engine implements, and the optional extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BurnApi`, `ConsignmentApi` and others). `assertEngineContract()` checks an engine's `contractVersion`.
-- **Errors.** `isEngineError(error, code?)` recognizes an engine error by its shape (`code`, `operation`, `protocol`), so it also works across copies of the SDK. `EngineContractError` reports a contract mismatch. `SDKError` and its subclasses (`ValidationError`, `CryptoError`, `NetworkError` and others) cover the core helpers.
-- **Keys.** `generateKeys(network)`, `deriveKeysFromMnemonic()` and `deriveKeysFromMnemonicOrSeed()`, message signing (`signMessage`, `verifyMessage`), PSBT and VSS helpers.
-- **Types and validation.** Wallet and transfer models, network constants and defaults, input validators.
-- **LSP client.** `UtexoLSPClient` and the composed `UtexoLsp` flows (see below).
-- **Conformance suite.** `@utexo/rgb-sdk-core/conformance` runs the engine contract checks against an engine implementation (`runEngineConformanceChecks`).
+| Area            | Exports                                                                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BurnApi`, `ConsignmentApi`, …), `assertEngineContract` |
+| Errors          | `isEngineError`, `EngineContractError`, `SDKError` and subclasses (`ValidationError`, `CryptoError`, `NetworkError`, …)                   |
+| Keys            | `generateKeys`, `deriveKeysFromMnemonic`, `signMessage`, `verifyMessage`, PSBT and VSS helpers                                            |
+| Types           | wallet, asset, transfer and invoice models; network constants and default endpoints                                                       |
+| LSP             | `UtexoLsp`, `UtexoLSPClient` (see [LSP flows](#lsp-flows))                                                                                |
+| Conformance     | `@utexo/rgb-sdk-core/conformance`: test suite for engine implementations                                                                  |
 
-```typescript
-import {
-  generateKeys,
-  isEngineError,
-  type SharedWalletApi,
-} from '@utexo/rgb-sdk-core';
+## Keys
 
-const { mnemonic } = await generateKeys('utexo');
+```ts
+import { generateKeys, deriveKeysFromMnemonic } from '@utexo/rgb-sdk-core';
+
+const keys = await generateKeys('signet'); // { mnemonic, xpub, accountXpubVanilla, … }
+const same = await deriveKeysFromMnemonic('signet', keys.mnemonic);
+```
+
+`generateKeys()` needs a secure `crypto.getRandomValues` and a global `Buffer`. React Native apps install them with `react-native-get-random-values` and `buffer` (see the `@utexo/rgb-lib-rn` README).
+
+## Errors
+
+Every engine rejects with an `EngineError`: a stable `code`, the public `operation` and the `protocol`. Check it by shape, which also works across duplicated copies of the SDK:
+
+```ts
+import { isEngineError } from '@utexo/rgb-sdk-core';
 
 try {
-  await engine.getBtcBalance();
+  await wallet.getBtcBalance();
 } catch (error) {
-  if (isEngineError(error, 'INVALID_PARAMS')) {
-    // error.operation, error.protocol, error.cause
+  if (isEngineError(error, 'WALLET_NOT_INITIALIZED')) {
+    await wallet.init();
+  } else {
+    throw error;
   }
 }
 ```
 
-`generateKeys()` needs a secure `crypto.getRandomValues` and a global `Buffer`. In React Native, install them before any SDK import (see the `@utexo/rgb-lib-rn` README).
+Shared codes: `INVALID_PARAMS`, `UNSUPPORTED_CAPABILITY`, `WALLET_NOT_INITIALIZED`, `WALLET_OFFLINE`, `WALLET_INVALID_STATE`, `WALLET_DISPOSED` and `ENGINE_CONTRACT_MISMATCH`. Engines add their own; each engine's README lists them.
 
-### Writing an engine
+## Writing an engine
 
-An engine implements `SharedWalletApi` and declares `contractVersion: '1'`. Run the conformance suite in its tests:
+An engine is a class that implements `SharedWalletApi`, declares `contractVersion: '1'` and `protocol`, and optionally implements extension interfaces. `UTEXOWallet` from `@utexo/rgb-sdk` accepts any such engine.
 
-```typescript
+Check it with the conformance suite in your tests:
+
+```ts
 import { runEngineConformanceChecks } from '@utexo/rgb-sdk-core/conformance';
 
 runEngineConformanceChecks({
-  name: 'my engine',
+  name: 'my-engine',
   engineClass: MyEngine,
   createEngineSync: () => new MyEngine(params, keys),
   extensions: ['restartable', 'fileBackup'],
@@ -59,28 +75,28 @@ runEngineConformanceChecks({
 
 It uses the Jest or Vitest globals; with another runner, pass `describe`, `it` and `expect`.
 
+The contract is versioned: a change that breaks engines or apps gets a new `contractVersion`, and `UTEXOWallet` refuses an engine whose version it does not support.
+
 ## LSP flows
 
-`UtexoLsp` composes the `utexo-lsp` HTTP API with a wallet into the flows apps
-actually use — channel setup, receiving RGB over Lightning, Lightning
-Addresses, and paying them. It depends on `ILspWallet`, a narrow structural
-interface, so it lives here rather than in a platform package; every platform
-Lightning wallet satisfies it by implementing `IUTEXOProtocol`.
+For Lightning wallets. `UtexoLsp` combines the `utexo-lsp` HTTP API with a
+wallet into ready flows: channel setup, receiving RGB over Lightning, Lightning
+Addresses and paying them. It needs a wallet that implements `ILspWallet`; the
+Lightning wallet in `@utexo/rgb-sdk-rn` does, and exposes it as
+`wallet.createLsp()`. `UtexoLSPClient` is the plain HTTP client.
 
-The Lightning wallet in `@utexo/rgb-sdk-rn` exposes it as `wallet.createLsp()`.
-
-| Method | What it does |
-|--------|--------------|
-| `connect()` / `waitForChannel()` | Peer with the LSP and wait until it has provisioned a usable asset channel |
-| `receiveAsset()` / `awaitReceiveSettlement()` | Be paid on-chain in RGB and delivered over Lightning |
-| `sendAsset()` | The reverse: pay over Lightning, LSP sends RGB on-chain |
-| `enableLightningAddress()` / `refillHashPool()` | Register an APay hash batch and get an LSP-hosted Lightning Address |
-| `payAddress()` / `quoteAddress()` | Pay a Lightning Address, or just quote the invoice |
-| `discoverAddress()` / `listPayableAssets()` | What an address can be paid in, from LNURL discovery |
-| `requestExternalInvoice()` | Quote a hosted BOLT11 for a payer that is not this wallet |
+| Method                                             | What it does                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------------- |
+| `connect()` / `waitForChannel()`                   | Peer with the LSP and wait until it has provisioned a usable asset channel |
+| `receiveAsset()` / `awaitReceiveSettlement()`      | Be paid on-chain in RGB and delivered over Lightning                       |
+| `sendAsset()`                                      | The reverse: pay over Lightning, LSP sends RGB on-chain                    |
+| `enableLightningAddress()` / `refillHashPool()`    | Register an APay hash batch and get an LSP-hosted Lightning Address        |
+| `payAddress()` / `quoteAddress()`                  | Pay a Lightning Address, or just quote the invoice                         |
+| `discoverAddress()` / `listPayableAssets()`        | What an address can be paid in, from LNURL discovery                       |
+| `requestExternalInvoice()`                         | Quote a hosted BOLT11 for a payer that is not this wallet                  |
 | `payExternalInvoice()` / `externalPaymentStatus()` | Pay a third party's plain BOLT11 out of an asset this wallet does not hold |
 
-### Two assets
+### Two-asset LSPs
 
 An LSP can serve one asset over Lightning while accepting another that it
 converts to it 1:1 — typically an `LNUSDT`-shaped asset it provisions, and a
