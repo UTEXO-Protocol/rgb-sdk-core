@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- `WalletTransfer.changeUtxos`: every change output of a transfer (empty when
+  it has none). rgb-lib bfa.6 reports several. Optional, so engines that do
+  not report change still conform.
+- `AssetBfa.knownCirculatingSupply` (optional).
+
+### Deprecated
+
+- `WalletTransfer.changeUtxo`: use `changeUtxos`. Engines set it to the first
+  change output.
+
 ### Removed
 
 - `IRgbLibBinding`: the rgb-lib native binding shape belongs to the engine

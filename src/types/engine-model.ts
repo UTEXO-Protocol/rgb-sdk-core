@@ -23,6 +23,7 @@ import type {
   InvoiceRequest,
   ListAssets,
   OnchainReceiveRequestModel,
+  Outpoint,
   Transfer,
   TransferKind,
   TransferStatus,
@@ -77,12 +78,19 @@ export interface WalletAssignment {
 
 export type WalletTransfer = Omit<
   Transfer,
-  'kind' | 'assignments' | 'requestedAssignment'
+  'kind' | 'assignments' | 'requestedAssignment' | 'changeUtxo'
 > &
   TransferAmount & {
     kind: TransferKind | 'Mint' | 'Link';
     assignments: WalletAssignment[];
     requestedAssignment?: WalletAssignment;
+    /**
+     * Every change output of the transfer; empty when it has none. Optional
+     * in the contract: engines that do not report change omit it.
+     */
+    changeUtxos?: Outpoint[];
+    /** @deprecated A transfer can have several change outputs; use `changeUtxos`. This is its first element. */
+    changeUtxo?: Outpoint;
   };
 
 export type WalletUnspent = Omit<Unspent, 'rgbAllocations'> & {
@@ -132,6 +140,8 @@ export interface AssetBfa {
   details?: string;
   precision: number;
   initialSupply: number;
+  /** Supply known to circulate, as read from the bridge contract, when the engine reports it. */
+  knownCirculatingSupply?: number;
   timestamp: number;
   addedAt: number;
   balance: Balance & { offchainOutbound?: number; offchainInbound?: number };
