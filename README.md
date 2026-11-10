@@ -1,17 +1,11 @@
 # @utexo/rgb-sdk-core
 
-Shared core for RGB SDK — platform-agnostic interfaces, types, and business logic.
+Platform-agnostic core of the UTEXO RGB SDK: the wallet engine contract, shared types, key helpers, errors and the LSP client. It has no React Native, Node or browser dependencies.
 
-## Overview
+Most apps do not install it alone. It is a peer dependency of:
 
-This package provides the common foundation used by the RGB SDK client libraries (`@utexo/rgb-sdk`, `@utexo/rgb-sdk-rn`, `@utexo/rgb-sdk-web`). It includes:
-
-- **Protocol contract** — `IUTEXOProtocol` and its domain groups (`ILightningNode`, `ILightningPayments`, `IAsyncPayments`, `IOnchainTransfers`, `IRgbAssets`, `IBitcoinWallet`) plus the optional carriers (`IPsbtSigning`, `IBeginEndFlows`)
-- **Signing & RLN model** — `ISigner` and the RLN model/interfaces
-- **LSP flows** — `UtexoLsp`, `UtexoLSPClient` and their types (see below)
-- **Crypto utilities** — key derivation, PSBT helpers, message signing, VSS
-- **Types & validation** — wallet models, network constants, input validation
-- **Error handling** — standardized error classes
+- `@utexo/rgb-lib-rn`: the RGB_L1 engine for React Native (native rgb-lib);
+- `@utexo/rgb-sdk`: the `UTEXOWallet` facade over any engine.
 
 ## Installation
 
@@ -19,11 +13,51 @@ This package provides the common foundation used by the RGB SDK client libraries
 npm install @utexo/rgb-sdk-core
 ```
 
-## Usage
+## What it contains
+
+- **Engine contract.** `SharedWalletApi`, the API every engine implements, and the optional extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BurnApi`, `ConsignmentApi` and others). `assertEngineContract()` checks an engine's `contractVersion`.
+- **Errors.** `isEngineError(error, code?)` recognizes an engine error by its shape (`code`, `operation`, `protocol`), so it also works across copies of the SDK. `EngineContractError` reports a contract mismatch. `SDKError` and its subclasses (`ValidationError`, `CryptoError`, `NetworkError` and others) cover the core helpers.
+- **Keys.** `generateKeys(network)`, `deriveKeysFromMnemonic()` and `deriveKeysFromMnemonicOrSeed()`, message signing (`signMessage`, `verifyMessage`), PSBT and VSS helpers.
+- **Types and validation.** Wallet and transfer models, network constants and defaults, input validators.
+- **LSP client.** `UtexoLSPClient` and the composed `UtexoLsp` flows (see below).
+- **Conformance suite.** `@utexo/rgb-sdk-core/conformance` runs the engine contract checks against an engine implementation (`runEngineConformanceChecks`).
 
 ```typescript
-import { generateKeys, type IUTEXOProtocol } from '@utexo/rgb-sdk-core';
+import {
+  generateKeys,
+  isEngineError,
+  type SharedWalletApi,
+} from '@utexo/rgb-sdk-core';
+
+const { mnemonic } = await generateKeys('utexo');
+
+try {
+  await engine.getBtcBalance();
+} catch (error) {
+  if (isEngineError(error, 'INVALID_PARAMS')) {
+    // error.operation, error.protocol, error.cause
+  }
+}
 ```
+
+`generateKeys()` needs a secure `crypto.getRandomValues` and a global `Buffer`. In React Native, install them before any SDK import (see the `@utexo/rgb-lib-rn` README).
+
+### Writing an engine
+
+An engine implements `SharedWalletApi` and declares `contractVersion: '1'`. Run the conformance suite in its tests:
+
+```typescript
+import { runEngineConformanceChecks } from '@utexo/rgb-sdk-core/conformance';
+
+runEngineConformanceChecks({
+  name: 'my engine',
+  engineClass: MyEngine,
+  createEngineSync: () => new MyEngine(params, keys),
+  extensions: ['restartable', 'fileBackup'],
+});
+```
+
+It uses the Jest or Vitest globals; with another runner, pass `describe`, `it` and `expect`.
 
 ## LSP flows
 
@@ -31,10 +65,9 @@ import { generateKeys, type IUTEXOProtocol } from '@utexo/rgb-sdk-core';
 actually use — channel setup, receiving RGB over Lightning, Lightning
 Addresses, and paying them. It depends on `ILspWallet`, a narrow structural
 interface, so it lives here rather than in a platform package; every platform
-wallet satisfies it by implementing `IUTEXOProtocol`.
+Lightning wallet satisfies it by implementing `IUTEXOProtocol`.
 
-Most apps reach it through their platform SDK (`wallet.createLsp()`) rather than
-constructing it directly.
+The Lightning wallet in `@utexo/rgb-sdk-rn` exposes it as `wallet.createLsp()`.
 
 | Method | What it does |
 |--------|--------------|
