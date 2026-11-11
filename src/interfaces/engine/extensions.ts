@@ -25,6 +25,7 @@ import type {
   AssetCFA,
   AssetUDA,
   Transaction,
+  VssBackupInfo,
   WalletBackupResponse,
 } from '../../types/wallet-model';
 
@@ -40,21 +41,31 @@ export interface RestartableWalletApi<TUnlockParams> {
   reinit(params?: TUnlockParams): Promise<void>;
 }
 
-/** Local, password-protected backup written to a file path. */
+/**
+ * Local, password-protected backup written to a file path (engines with a
+ * file system). Restoring the file is engine-specific: it runs before the
+ * engine opens a wallet, so it is not a method here.
+ */
 export interface FileBackupApi {
-  createBackup(params: {
-    backupPath: string;
+  exportBackupToFile(params: {
+    /** Absolute path the archive is written to. */
+    filePath: string;
     password: string;
   }): Promise<WalletBackupResponse>;
 }
 
 /**
  * Password-protected backup as bytes, for engines without a file system (a
- * browser). The app stores the bytes where it wants.
+ * browser). The app stores the bytes where it wants. A backup restores only
+ * on the engine that made it.
  */
-export interface BackupBytesApi {
+export interface BackupExportApi {
   /** Encrypted backup of the whole wallet state. */
   exportBackup(params: { password: string }): Promise<Uint8Array>;
+}
+
+/** Restore of an `exportBackup()` result into the engine instance. */
+export interface BackupRestoreApi {
   /**
    * Replaces the local wallet state with the backup. Allowed only after
    * `init()` and before the wallet connects; rejects with
@@ -98,12 +109,28 @@ export interface ConsignmentFileApi {
 /** Replicate wallet state to a VSS server now. */
 export interface VssBackupApi {
   /** Returns the new backup version. */
-  backupNow(): Promise<number>;
+  backupToVss(): Promise<number>;
+}
+
+/** Restore of the wallet state from its VSS backup. */
+export interface VssRestoreApi {
+  /**
+   * Replaces the local wallet state with the server copy. Allowed only after
+   * `init()` and before the wallet connects; rejects with
+   * `WALLET_INVALID_STATE` afterwards, and on a wallet with local data unless
+   * `overwrite` is true.
+   */
+  restoreFromVss(options?: { overwrite?: boolean }): Promise<void>;
+}
+
+/** What the VSS server holds for this wallet. */
+export interface VssBackupInfoApi {
+  getVssBackupInfo(): Promise<VssBackupInfo>;
 }
 
 /** Clear the VSS write fence. Separate from backup: not every VSS engine has it. */
 export interface VssFenceApi {
-  vssClearFence(password: string): Promise<void>;
+  clearVssFence(params: { password: string }): Promise<void>;
 }
 
 /**

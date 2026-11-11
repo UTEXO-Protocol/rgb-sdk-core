@@ -18,7 +18,7 @@ npm install @utexo/rgb-sdk-core
 
 | Area            | Exports                                                                                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BackupBytesApi`, `BurnApi`, `ConsignmentApi`, …), `assertEngineContract` |
+| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BackupExportApi`, `BackupRestoreApi`, `VssBackupApi`, `VssRestoreApi`, `BurnApi`, `ConsignmentApi`, …), `assertEngineContract` |
 | Errors          | `isEngineError`, `EngineContractError`, `SDKError` and subclasses (`ValidationError`, `CryptoError`, `NetworkError`, …)                   |
 | Keys            | `generateKeys`, `deriveKeysFromMnemonic`, `signMessage`, `verifyMessage`, PSBT and VSS helpers                                            |
 | Types           | wallet, asset, transfer and invoice models; network constants and default endpoints                                                       |

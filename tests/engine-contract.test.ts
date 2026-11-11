@@ -5,13 +5,17 @@ import {
   WalletError,
 } from '../dist/index.mjs';
 import type {
-  BackupBytesApi,
+  BackupExportApi,
+  BackupRestoreApi,
   BurnApi,
   ConsignmentApi,
   EngineCapabilities,
   FileBackupApi,
   RestartableWalletApi,
   SharedWalletApi,
+  VssBackupApi,
+  VssBackupInfoApi,
+  VssRestoreApi,
 } from '../dist/index.mjs';
 import {
   ENGINE_CONTRACT_VERSION_UNDER_TEST,
@@ -33,9 +37,13 @@ class FakeEngine
     SharedWalletApi<Unlock>,
     RestartableWalletApi<Unlock>,
     FileBackupApi,
-    BackupBytesApi,
+    BackupExportApi,
+    BackupRestoreApi,
     BurnApi,
-    ConsignmentApi
+    ConsignmentApi,
+    VssBackupApi,
+    VssRestoreApi,
+    VssBackupInfoApi
 {
   readonly protocol = 'RGB_L1' as const;
   readonly contractVersion = '1' as const;
@@ -90,9 +98,12 @@ class FakeEngine
   syncWallet = notUsed;
   shutdown = notUsed;
   reinit = notUsed;
-  createBackup = notUsed;
+  exportBackupToFile = notUsed;
   exportBackup = notUsed;
   restoreBackup = notUsed;
+  backupToVss = notUsed;
+  restoreFromVss = notUsed;
+  getVssBackupInfo = notUsed;
   getBfaCapabilities = notUsed;
   burn = notUsed;
   getConsignment = notUsed;
@@ -113,9 +124,13 @@ function asClass(instance: object): { prototype: object } {
 const extensions = [
   'restartable',
   'fileBackup',
-  'backupBytes',
+  'backupExport',
+  'backupRestore',
   'burn',
   'consignment',
+  'vssBackup',
+  'vssRestore',
+  'vssBackupInfo',
 ] as const;
 
 runEngineConformanceChecks({
@@ -185,7 +200,7 @@ describe('runEngineConformanceChecks catches', () => {
       extensions,
     });
     expect(failures).toEqual([
-      'half — engine contract › extensions › backupBytes: exposes restoreBackup()',
+      'half — engine contract › extensions › backupRestore: exposes restoreBackup()',
     ]);
   });
 

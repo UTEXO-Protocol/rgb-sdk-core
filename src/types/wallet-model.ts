@@ -38,9 +38,14 @@ export interface VssBackupConfig {
 
 /** Information about the current VSS backup status for a wallet. */
 export interface VssBackupInfo {
+  /** The server holds a backup for this wallet. */
   backupExists: boolean;
+  /** Version of the server copy; null when there is none. */
   serverVersion?: number | null;
+  /** The local state changed since the last upload. */
   backupRequired: boolean;
+  /** Error of the most recent failed upload; null after a success. */
+  lastBackupError?: string | null;
 }
 
 // ─── Core request / response models ──────────────────────────────────────────

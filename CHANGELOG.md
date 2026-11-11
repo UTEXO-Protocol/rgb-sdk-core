@@ -4,15 +4,29 @@
 
 ### Added
 
-- **`BackupBytesApi`** engine extension (`backupBytes` in the conformance
-  suite): `exportBackup({ password })` returns the encrypted backup as bytes,
-  `restoreBackup({ bytes, password, overwrite? })` restores it between
-  `init()` and the first connection. For engines without a file system;
-  `FileBackupApi` is unchanged.
+- **Backup extensions**, one naming rule (every name says `Backup` or `Vss`):
+  - `BackupExportApi` (`backupExport`): `exportBackup({ password })` returns
+    the encrypted backup as bytes, for engines without a file system.
+  - `BackupRestoreApi` (`backupRestore`): `restoreBackup({ bytes, password,
+    overwrite? })` restores it between `init()` and the first connection.
+  - `VssRestoreApi` (`vssRestore`): `restoreFromVss({ overwrite? })`, the
+    same window.
+  - `VssBackupInfoApi` (`vssBackupInfo`): `getVssBackupInfo()`;
+    `VssBackupInfo.lastBackupError` (optional) is new.
+  A backup restores only on the engine that made it.
 - `WalletTransfer.changeUtxos`: every change output of a transfer (empty when
   it has none). rgb-lib bfa.6 reports several. Optional, so engines that do
   not report change still conform.
 - `AssetBfa.knownCirculatingSupply` (optional).
+
+### Changed (breaking, unreleased contract)
+
+- `FileBackupApi.createBackup({ backupPath, password })` is now
+  `exportBackupToFile({ filePath, password })`.
+- `VssBackupApi.backupNow()` is now `backupToVss()`.
+- `VssFenceApi.vssClearFence(password)` is now `clearVssFence({ password })`.
+- Conformance names: `backupExport`, `backupRestore`, `vssRestore`,
+  `vssBackupInfo` are new. The legacy `IUTEXOProtocol` keeps its names.
 
 ### Deprecated
 
