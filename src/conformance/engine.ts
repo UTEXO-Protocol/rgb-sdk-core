@@ -69,6 +69,7 @@ export const SHARED_WALLET_METHODS = [
 export const ENGINE_EXTENSIONS = {
   restartable: ['shutdown', 'reinit'],
   fileBackup: ['createBackup'],
+  backupBytes: ['exportBackup', 'restoreBackup'],
   maintenance: ['drainTo', 'deleteTransfers'],
   burn: ['getBfaCapabilities', 'burn'],
   consignment: ['getBfaCapabilities', 'getConsignment'],

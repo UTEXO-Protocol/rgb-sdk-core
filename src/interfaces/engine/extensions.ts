@@ -48,6 +48,26 @@ export interface FileBackupApi {
   }): Promise<WalletBackupResponse>;
 }
 
+/**
+ * Password-protected backup as bytes, for engines without a file system (a
+ * browser). The app stores the bytes where it wants.
+ */
+export interface BackupBytesApi {
+  /** Encrypted backup of the whole wallet state. */
+  exportBackup(params: { password: string }): Promise<Uint8Array>;
+  /**
+   * Replaces the local wallet state with the backup. Allowed only after
+   * `init()` and before the wallet connects; rejects with
+   * `WALLET_INVALID_STATE` afterwards, and on a wallet with local data unless
+   * `overwrite` is true.
+   */
+  restoreBackup(params: {
+    bytes: Uint8Array;
+    password: string;
+    overwrite?: boolean;
+  }): Promise<void>;
+}
+
 export interface WalletMaintenanceApi {
   /** Sends the whole vanilla BTC balance to `address`; returns the txid. */
   drainTo(params: { address: string; feeRate?: number }): Promise<string>;

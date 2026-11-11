@@ -4,6 +4,11 @@
 
 ### Added
 
+- **`BackupBytesApi`** engine extension (`backupBytes` in the conformance
+  suite): `exportBackup({ password })` returns the encrypted backup as bytes,
+  `restoreBackup({ bytes, password, overwrite? })` restores it between
+  `init()` and the first connection. For engines without a file system;
+  `FileBackupApi` is unchanged.
 - `WalletTransfer.changeUtxos`: every change output of a transfer (empty when
   it has none). rgb-lib bfa.6 reports several. Optional, so engines that do
   not report change still conform.

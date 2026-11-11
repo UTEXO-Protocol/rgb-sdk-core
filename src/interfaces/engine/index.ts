@@ -15,6 +15,7 @@ export type {
 export type {
   RestartableWalletApi,
   FileBackupApi,
+  BackupBytesApi,
   WalletMaintenanceApi,
   BurnApi,
   ConsignmentApi,

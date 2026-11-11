@@ -5,6 +5,7 @@ import {
   WalletError,
 } from '../dist/index.mjs';
 import type {
+  BackupBytesApi,
   BurnApi,
   ConsignmentApi,
   EngineCapabilities,
@@ -32,6 +33,7 @@ class FakeEngine
     SharedWalletApi<Unlock>,
     RestartableWalletApi<Unlock>,
     FileBackupApi,
+    BackupBytesApi,
     BurnApi,
     ConsignmentApi
 {
@@ -89,6 +91,8 @@ class FakeEngine
   shutdown = notUsed;
   reinit = notUsed;
   createBackup = notUsed;
+  exportBackup = notUsed;
+  restoreBackup = notUsed;
   getBfaCapabilities = notUsed;
   burn = notUsed;
   getConsignment = notUsed;
@@ -109,6 +113,7 @@ function asClass(instance: object): { prototype: object } {
 const extensions = [
   'restartable',
   'fileBackup',
+  'backupBytes',
   'burn',
   'consignment',
 ] as const;
@@ -168,6 +173,19 @@ describe('runEngineConformanceChecks catches', () => {
     });
     expect(failures).toEqual([
       'stub — engine contract › extensions › messageSigning (not declared): signMessage() is absent',
+    ]);
+  });
+
+  it('a declared extension with a method missing', () => {
+    const engine = new FakeEngine() as unknown as Record<string, unknown>;
+    delete engine.restoreBackup;
+    const failures = failuresOf({
+      name: 'half',
+      engineClass: asClass(engine),
+      extensions,
+    });
+    expect(failures).toEqual([
+      'half — engine contract › extensions › backupBytes: exposes restoreBackup()',
     ]);
   });
 
