@@ -10,7 +10,7 @@
  *
  * ```ts
  * runEngineConformanceChecks({
- *   name: 'rgb-lib-rn',
+ *   name: 'rgb-sdk-rn',
  *   engineClass: RgbLibWallet,
  *   createEngineSync: () => new RgbLibWallet(params, keys, fakeBinding),
  *   extensions: ['restartable', 'fileBackup', 'maintenance', 'burn', 'consignment', 'consignmentFile'],

@@ -6,7 +6,7 @@
 The shared core of the UTEXO RGB SDK: the wallet engine contract, types, errors, key helpers and the LSP client. Pure TypeScript with no React Native, Node or browser dependencies.
 
 > [!TIP]
-> Building a wallet app? Start with [`@utexo/rgb-sdk`](https://www.npmjs.com/package/@utexo/rgb-sdk) and an engine such as [`@utexo/rgb-lib-rn`](https://www.npmjs.com/package/@utexo/rgb-lib-rn). They depend on this package and re-export what apps need. Install it directly to write an engine, share types, or use the key and LSP helpers.
+> Building a wallet app? Start with [`@utexo/rgb-sdk`](https://www.npmjs.com/package/@utexo/rgb-sdk) and an engine such as [`@utexo/rgb-sdk-rn`](https://www.npmjs.com/package/@utexo/rgb-sdk-rn). They depend on this package and re-export what apps need. Install it directly to write an engine, share types, or use the key and LSP helpers.
 
 ## Installation
 
@@ -34,7 +34,7 @@ const keys = await generateKeys('signet'); // { mnemonic, xpub, accountXpubVanil
 const same = await deriveKeysFromMnemonic('signet', keys.mnemonic);
 ```
 
-`generateKeys()` needs a secure `crypto.getRandomValues` and a global `Buffer`. React Native apps install them with `react-native-get-random-values` and `buffer` (see the `@utexo/rgb-lib-rn` README).
+`generateKeys()` needs a secure `crypto.getRandomValues` and a global `Buffer`. React Native apps install them with `react-native-get-random-values` and `buffer` (see the `@utexo/rgb-sdk-rn` README).
 
 ## Errors
 
