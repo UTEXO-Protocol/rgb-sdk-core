@@ -30,8 +30,8 @@ npm install @utexo/rgb-sdk-core
 ```ts
 import { generateKeys, deriveKeysFromMnemonic } from '@utexo/rgb-sdk-core';
 
-const keys = await generateKeys('signet'); // { mnemonic, xpub, accountXpubVanilla, … }
-const same = await deriveKeysFromMnemonic('signet', keys.mnemonic);
+const keys = await generateKeys('utexo'); // { mnemonic, xpub, accountXpubVanilla, … }
+const same = await deriveKeysFromMnemonic('utexo', keys.mnemonic);
 ```
 
 `generateKeys()` needs a secure `crypto.getRandomValues`. `signMessage()`, `verifyMessage()`, `detectPsbtType()` and `validateBase64()` also need a global `Buffer`. React Native apps install them with `react-native-get-random-values` and `buffer` (see the `@utexo/rgb-sdk-rn` README).
