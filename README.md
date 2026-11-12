@@ -6,7 +6,16 @@
 The shared core of the UTEXO RGB SDK: the wallet engine contract, types, errors and key helpers. Pure TypeScript with no React Native, Node or browser dependencies.
 
 > [!TIP]
-> Building a wallet app? Start with [`@utexo/rgb-sdk`](https://www.npmjs.com/package/@utexo/rgb-sdk) and an engine such as [`@utexo/rgb-sdk-rn`](https://www.npmjs.com/package/@utexo/rgb-sdk-rn). They depend on this package and re-export what apps need. Install it directly to write an engine, share types, or use the key helpers.
+> Building a wallet app? Start with [`@utexo/rgb-sdk`](https://www.npmjs.com/package/@utexo/rgb-sdk) and one of the [engines](#engines). They depend on this package and re-export what apps need. Install it directly to write an engine, share types, or use the key helpers.
+
+## Engines
+
+| Engine                                                                              | Platform                    | Protocol                |
+| ----------------------------------------------------------------------------------- | --------------------------- | ----------------------- |
+| [`@utexo/rgb-sdk-rn`](https://github.com/UTEXO-Protocol/rgb-sdk-rn) (`RgbLibRn`)    | React Native (iOS, Android) | RGB on-chain (`RGB_L1`) |
+| [`@utexo/rgb-sdk-web`](https://github.com/UTEXO-Protocol/rgb-sdk-web) (`RgbLibWeb`) | Browser                     | RGB on-chain (`RGB_L1`) |
+
+Both implement the engine contract from this package; [`@utexo/rgb-sdk`](https://github.com/UTEXO-Protocol/rgb-sdk) wraps either one in `UTEXOWallet`.
 
 ## Installation
 
