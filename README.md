@@ -1,7 +1,7 @@
 # @utexo/rgb-sdk-core
 
 [![npm](https://img.shields.io/npm/v/@utexo/rgb-sdk-core)](https://www.npmjs.com/package/@utexo/rgb-sdk-core)
-[![license](https://img.shields.io/npm/l/@utexo/rgb-sdk-core)](https://www.npmjs.com/package/@utexo/rgb-sdk-core)
+[![license](https://img.shields.io/npm/l/@utexo/rgb-sdk-core)](LICENSE)
 
 The shared core of the UTEXO RGB SDK: the wallet engine contract, types, errors, key helpers and the LSP client. Pure TypeScript with no React Native, Node or browser dependencies.
 
@@ -18,7 +18,7 @@ npm install @utexo/rgb-sdk-core
 
 | Area            | Exports                                                                                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BackupExportApi`, `BackupRestoreApi`, `VssBackupApi`, `VssRestoreApi`, `BurnApi`, `ConsignmentApi`, …), `assertEngineContract` |
+| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BackupExportApi`, `BackupRestoreApi`, `VssBackupApi`, `VssRestoreApi`, `VssBackupInfoApi`, `VssFenceApi`, `BurnApi`, `ConsignmentApi`, …), `assertEngineContract` |
 | Errors          | `isEngineError`, `EngineContractError`, `SDKError` and subclasses (`ValidationError`, `CryptoError`, `NetworkError`, …)                   |
 | Keys            | `generateKeys`, `deriveKeysFromMnemonic`, `signMessage`, `verifyMessage`, PSBT and VSS helpers                                            |
 | Types           | wallet, asset, transfer and invoice models; network constants and default endpoints                                                       |
@@ -81,9 +81,9 @@ The contract is versioned: a change that breaks engines or apps gets a new `cont
 
 For Lightning wallets. `UtexoLsp` combines the `utexo-lsp` HTTP API with a
 wallet into ready flows: channel setup, receiving RGB over Lightning, Lightning
-Addresses and paying them. It needs a wallet that implements `ILspWallet`; the
-Lightning wallet in `@utexo/rgb-sdk-rn` does, and exposes it as
-`wallet.createLsp()`. `UtexoLSPClient` is the plain HTTP client.
+Addresses and paying them. It needs a Lightning wallet that implements
+`ILspWallet`; the on-chain (`RGB_L1`) engines such as `@utexo/rgb-sdk-rn` do
+not. `UtexoLSPClient` is the plain HTTP client.
 
 | Method                                             | What it does                                                               |
 | -------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -119,9 +119,6 @@ Where that applies:
   decodes the LSP's HODL invoice locally and refuses the quote unless the hash,
   the assets and the amounts match what the LSP reported.
 
-Worked examples, one file per flow:
-[`rgb-sdk-rn/examples/lsp-two-assets`](https://github.com/UTEXO-Protocol/rgb-sdk-rn/tree/main/examples/lsp-two-assets).
-
 ## License
 
-MIT
+[MIT](LICENSE)
