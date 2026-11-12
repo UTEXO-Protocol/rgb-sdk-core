@@ -110,4 +110,33 @@ describe('calculateMasterFingerprint', () => {
     expect(fp).toMatch(/^[0-9a-f]{8}$/);
     expect(fp).toBe('42424232');
   });
+
+  it('works when the Buffer global is undefined (React Native without a polyfill)', async () => {
+    const bip32 = bip32Factory();
+    const seed = bip39.mnemonicToSeedSync(
+      'flight seminar tray bulb level embody switch enhance august deny scene dismiss'
+    );
+    const node = bip32.fromSeed(seed);
+    const saved = globalThis.Buffer;
+    // @ts-expect-error: simulate a runtime without Buffer
+    delete globalThis.Buffer;
+    try {
+      expect(typeof Buffer).toBe('undefined');
+      await expect(calculateMasterFingerprint(node)).resolves.toBe('42424232');
+    } finally {
+      globalThis.Buffer = saved;
+    }
+  });
+
+  it('gives the same result for Buffer and Uint8Array public keys', async () => {
+    const bip32 = bip32Factory();
+    const seed = bip39.mnemonicToSeedSync(
+      'flight seminar tray bulb level embody switch enhance august deny scene dismiss'
+    );
+    const node = bip32.fromSeed(seed);
+    const asBuffer = { publicKey: Buffer.from(node.publicKey) };
+    await expect(
+      calculateMasterFingerprint(asBuffer as typeof node)
+    ).resolves.toBe('42424232');
+  });
 });

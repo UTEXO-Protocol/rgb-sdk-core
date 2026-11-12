@@ -334,7 +334,7 @@ async function buildKeysOutputFromXpriv(xpriv: string): Promise<GeneratedKeys> {
  *
  * @example
  * ```typescript
- * const keys = await generateKeys('testnet');
+ * const keys = await generateKeys('utexo');
  * console.log('Mnemonic:', keys.mnemonic);
  * console.log('Master Fingerprint:', keys.master_fingerprint);
  * ```
@@ -379,7 +379,7 @@ export async function generateKeys(
  *
  * @example
  * ```typescript
- * const keys = await deriveKeysFromMnemonic('testnet', 'abandon abandon abandon...');
+ * const keys = await deriveKeysFromMnemonic('utexo', 'abandon abandon abandon...');
  * console.log('Account XPub:', keys.account_xpub_vanilla);
  * ```
  */
@@ -448,11 +448,11 @@ export async function deriveKeysFromSeed(
  * @example
  * ```typescript
  * // With mnemonic
- * const keys1 = await deriveKeysFromMnemonicOrSeed('testnet', 'abandon abandon abandon...');
+ * const keys1 = await deriveKeysFromMnemonicOrSeed('utexo', 'abandon abandon abandon...');
  *
  * // With seed (Uint8Array)
  * const seed = new Uint8Array([...]);
- * const keys2 = await deriveKeysFromMnemonicOrSeed('testnet', seed);
+ * const keys2 = await deriveKeysFromMnemonicOrSeed('utexo', seed);
  * ```
  */
 export async function deriveKeysFromMnemonicOrSeed(
@@ -505,7 +505,7 @@ export async function restoreKeys(
  *
  * @example
  * ```typescript
- * const xpubs = await accountXpubsFromMnemonic('testnet', 'abandon abandon abandon...');
+ * const xpubs = await accountXpubsFromMnemonic('utexo', 'abandon abandon abandon...');
  * console.log('Vanilla XPub:', xpubs.account_xpub_vanilla);
  * console.log('Colored XPub:', xpubs.account_xpub_colored);
  * ```
@@ -521,7 +521,7 @@ export async function restoreKeys(
  *
  * @example
  * ```typescript
- * const xpriv = await getXprivFromMnemonic('testnet', 'your mnemonic phrase here');
+ * const xpriv = await getXprivFromMnemonic('utexo', 'your mnemonic phrase here');
  * console.log('Master xpriv:', xpriv);
  * ```
  */
@@ -588,7 +588,7 @@ export async function getXpubFromXpriv(
  *
  * @example
  * ```typescript
- * const keys = await deriveKeysFromXpriv('testnet', 'xprv...');
+ * const keys = await deriveKeysFromXpriv('utexo', 'xprv...');
  * console.log('Master Fingerprint:', keys.master_fingerprint);
  * console.log('Account xpub vanilla:', keys.account_xpub_vanilla);
  * ```

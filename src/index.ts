@@ -45,6 +45,8 @@ export {
   validateHex,
   validateRequired,
   validateString,
+  validateBurnParams,
+  validateConsignmentLookup,
 } from './utils/validation';
 export { isNetwork } from './utils/network';
 export {
@@ -76,7 +78,6 @@ export {
 } from './utils/bip32-helpers';
 
 // Interfaces
-export type { IRgbLibBinding } from './interfaces/IRgbLibBinding';
 export type { ISigner } from './interfaces/ISigner';
 
 // The UTEXO protocol contract — domain groups + optional carriers.
@@ -97,6 +98,16 @@ export type {
   IUTEXOProtocol,
   UTEXOWalletCreateParams,
 } from './interfaces/wallet';
+
+// The engine contract — base + extensions, next to the legacy IUTEXOProtocol.
+export type * from './types/engine-model';
+export type * from './interfaces/engine';
+export {
+  isEngineError,
+  assertEngineContract,
+  EngineContractError,
+} from './engine';
+export type { EngineError, SharedEngineErrorCode } from './engine';
 
 // VSS defaults
 export { DEFAULT_VSS_SERVER_URL, getVssConfigs } from './utexo/config/vss';

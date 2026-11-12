@@ -6,6 +6,8 @@ import {
   validateHex,
   validateRequired,
   validateString,
+  validateBurnParams,
+  validateConsignmentLookup,
   ValidationError,
 } from '../dist/index.mjs';
 
@@ -119,5 +121,74 @@ describe('validateString', () => {
 
   it('throws for non-string', () => {
     expect(() => validateString(123 as any, 'field')).toThrow(ValidationError);
+  });
+});
+
+describe('validateBurnParams', () => {
+  const valid = {
+    assetId: 'rgb:asset',
+    amount: '1',
+    feeRate: 1,
+    minConfirmations: 1,
+  };
+  const fieldOf = (params: unknown): string | undefined => {
+    try {
+      validateBurnParams(params as typeof valid);
+      return undefined;
+    } catch (error) {
+      expect(error).toBeInstanceOf(ValidationError);
+      return (error as ValidationError).field;
+    }
+  };
+
+  it('accepts a valid request, with and without burnRecipient', () => {
+    expect(fieldOf(valid)).toBeUndefined();
+    expect(
+      fieldOf({ ...valid, burnRecipient: 'aB'.repeat(32) })
+    ).toBeUndefined();
+    expect(
+      fieldOf({ ...valid, amount: '18446744073709551615' })
+    ).toBeUndefined();
+    expect(fieldOf({ ...valid, minConfirmations: 255 })).toBeUndefined();
+  });
+
+  it.each([
+    [null, 'assetId'],
+    [{ ...valid, assetId: 'asset' }, 'assetId'],
+    [{ ...valid, assetId: 'rgb:' + 'a'.repeat(253) }, 'assetId'],
+    [{ ...valid, amount: 1 }, 'amount'],
+    [{ ...valid, amount: '0' }, 'amount'],
+    [{ ...valid, amount: '01' }, 'amount'],
+    [{ ...valid, amount: '-1' }, 'amount'],
+    [{ ...valid, amount: '18446744073709551616' }, 'amount'],
+    [{ ...valid, burnRecipient: '0x' + 'a'.repeat(62) }, 'burnRecipient'],
+    [{ ...valid, burnRecipient: 'a'.repeat(63) }, 'burnRecipient'],
+    [{ ...valid, feeRate: 0 }, 'feeRate'],
+    [{ ...valid, feeRate: 1.5 }, 'feeRate'],
+    [{ ...valid, feeRate: Number.MAX_SAFE_INTEGER + 1 }, 'feeRate'],
+    [{ ...valid, minConfirmations: 0 }, 'minConfirmations'],
+    [{ ...valid, minConfirmations: 256 }, 'minConfirmations'],
+    [{ ...valid, minConfirmations: 1.5 }, 'minConfirmations'],
+  ])('rejects %j with field %s', (params, field) => {
+    expect(fieldOf(params)).toBe(field);
+  });
+});
+
+describe('validateConsignmentLookup', () => {
+  const txid = 'a'.repeat(64);
+
+  it('accepts an asset id and a 64-hex txid', () => {
+    expect(() => validateConsignmentLookup('rgb:asset', txid)).not.toThrow();
+  });
+
+  it.each([
+    [['bad', txid], 'assetId'],
+    [[undefined, txid], 'assetId'],
+    [['rgb:asset', 'bad'], 'txid'],
+    [['rgb:asset', 'g'.repeat(64)], 'txid'],
+  ])('rejects %j with field %s', (args, field) => {
+    expect(() =>
+      validateConsignmentLookup(...(args as [string, string]))
+    ).toThrow(expect.objectContaining({ code: 'VALIDATION_ERROR', field }));
   });
 });

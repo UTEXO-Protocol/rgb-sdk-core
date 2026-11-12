@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Backup extensions**, one naming rule (every name says `Backup` or `Vss`):
+  - `BackupExportApi` (`backupExport`): `exportBackup({ password })` returns
+    the encrypted backup as bytes, for engines without a file system.
+  - `BackupRestoreApi` (`backupRestore`): `restoreBackup({ bytes, password,
+    overwrite? })` restores it between `init()` and the first connection.
+  - `VssRestoreApi` (`vssRestore`): `restoreFromVss({ overwrite? })`, the
+    same window.
+  - `VssBackupInfoApi` (`vssBackupInfo`): `getVssBackupInfo()`;
+    `VssBackupInfo.lastBackupError` (optional) is new.
+  A backup restores only on the engine that made it.
+- `WalletTransfer.changeUtxos`: every change output of a transfer (empty when
+  it has none). rgb-lib bfa.6 reports several. Optional, so engines that do
+  not report change still conform.
+- `AssetBfa.knownCirculatingSupply` (optional).
+
+### Changed (breaking, unreleased contract)
+
+- `FileBackupApi.createBackup({ backupPath, password })` is now
+  `exportBackupToFile({ filePath, password })`.
+- `VssBackupApi.backupNow()` is now `backupToVss()`.
+- `VssFenceApi.vssClearFence(password)` is now `clearVssFence({ password })`.
+- Conformance names: `backupExport`, `backupRestore`, `vssRestore`,
+  `vssBackupInfo` are new. The legacy `IUTEXOProtocol` keeps its names.
+
+### Deprecated
+
+- `WalletTransfer.changeUtxo`: use `changeUtxos`. Engines set it to the first
+  change output.
+
+### Removed
+
+- `IRgbLibBinding`: the rgb-lib native binding shape belongs to the engine
+  (`@utexo/rgb-sdk-rn`), not to the shared contract, and nothing imported it.
+
 ## 1.0.0-beta.9
 
 ### Added
