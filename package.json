@@ -71,6 +71,10 @@
     "blockchain"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UTEXO-Protocol/rgb-sdk-core.git"
+  },
   "prettier": {
     "quoteProps": "consistent",
     "singleQuote": true,

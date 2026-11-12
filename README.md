@@ -34,7 +34,7 @@ const keys = await generateKeys('signet'); // { mnemonic, xpub, accountXpubVanil
 const same = await deriveKeysFromMnemonic('signet', keys.mnemonic);
 ```
 
-`generateKeys()` needs a secure `crypto.getRandomValues` and a global `Buffer`. React Native apps install them with `react-native-get-random-values` and `buffer` (see the `@utexo/rgb-sdk-rn` README).
+`generateKeys()` needs a secure `crypto.getRandomValues`. `signMessage()`, `verifyMessage()`, `detectPsbtType()` and `validateBase64()` also need a global `Buffer`. React Native apps install them with `react-native-get-random-values` and `buffer` (see the `@utexo/rgb-sdk-rn` README).
 
 ## Errors
 
