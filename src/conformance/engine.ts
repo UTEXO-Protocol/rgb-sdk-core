@@ -82,6 +82,7 @@ export const ENGINE_EXTENSIONS = {
   messageSigning: ['signMessage', 'verifyMessage'],
   indexerCheck: ['checkIndexerUrl'],
   assetMetadata: ['getAssetMetadata'],
+  receivedMint: ['getReceivedMint'],
   fileIssuance: ['issueAssetCfa', 'issueAssetUda'],
   txidLookup: ['listTransfersByTxid', 'listTransactionsByTxid'],
   addressRotation: ['rotateVanillaAddress'],

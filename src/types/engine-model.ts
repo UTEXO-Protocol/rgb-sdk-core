@@ -165,6 +165,35 @@ export interface BfaCapabilities {
   bfa: boolean;
 }
 
+/**
+ * What the EVM lock of a received BFA mint has to match, once the wallet has
+ * checked the mint. u64 values are exact decimal strings.
+ */
+export interface ReceivedMint {
+  /** ID of the mint operation. */
+  opid: string;
+  /** ID the lock has to be made for (hex), committing to the mint operation and its TX. */
+  lockId: string;
+  /** Amount minted, in base units, that the lock has to match. */
+  amount: string;
+  /** EVM block the lock has to be included before. */
+  beforeBlock: string;
+  /** EIP-155 chain ID of the EVM chain of the asset's bridge contract. */
+  evmChainId: string;
+  /** Address of the asset's bridge contract, where the lock has to be made. */
+  bridgeContract: string;
+}
+
+/** Options for `ReceivedMintApi.getReceivedMint`. */
+export interface ReceivedMintOptions {
+  /**
+   * Refresh the wallet's pending incoming transfers first (online), so a mint
+   * consignment that arrived is checked. Outgoing transfers are not refreshed,
+   * so no send or burn is initiated or progressed. Default `false` (offline).
+   */
+  refreshIncoming?: boolean;
+}
+
 export interface BurnParams {
   assetId: string;
   /** Exact decimal base units. */

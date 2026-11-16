@@ -28,6 +28,7 @@ export type {
   MessageSigningApi,
   IndexerCheckApi,
   AssetMetadataApi,
+  ReceivedMintApi,
   FileIssuanceApi,
   TxidLookupApi,
   AddressRotationApi,

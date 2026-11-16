@@ -18,6 +18,12 @@
   it has none). rgb-lib bfa.6 reports several. Optional, so engines that do
   not report change still conform.
 - `AssetBfa.knownCirculatingSupply` (optional).
+- `ReceivedMintApi` (`receivedMint`): `getReceivedMint(recipientId, options?)`
+  returns the `ReceivedMint` (what the EVM lock of a received BFA mint has to
+  match: `opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`,
+  `bridgeContract`; u64 values as decimal strings) or `undefined`. Offline by
+  default; `ReceivedMintOptions.refreshIncoming` first refreshes pending
+  incoming transfers only.
 
 ### Changed (breaking, unreleased contract)
 
