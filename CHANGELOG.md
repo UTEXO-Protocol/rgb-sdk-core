@@ -27,6 +27,9 @@
 - `VssFenceApi.vssClearFence(password)` is now `clearVssFence({ password })`.
 - Conformance names: `backupExport`, `backupRestore`, `vssRestore`,
   `vssBackupInfo` are new. The legacy `IUTEXOProtocol` keeps its names.
+- `AssetBfa.initialSupply` is optional: rgb-lib bfa.8 no longer reports it,
+  so `@utexo/rgb-sdk-rn` omits it. Use `knownCirculatingSupply`. Code that
+  reads `initialSupply` as a `number` must handle `undefined`.
 
 ### Deprecated
 

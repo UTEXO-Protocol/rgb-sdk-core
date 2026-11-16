@@ -139,7 +139,8 @@ export interface AssetBfa {
   name: string;
   details?: string;
   precision: number;
-  initialSupply: number;
+  /** Supply issued at creation, when the engine reports it (rgb-lib bfa.8 and later do not). */
+  initialSupply?: number;
   /** Supply known to circulate, as read from the bridge contract, when the engine reports it. */
   knownCirculatingSupply?: number;
   timestamp: number;
