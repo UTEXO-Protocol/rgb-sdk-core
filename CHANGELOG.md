@@ -1,6 +1,23 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta.11 (unreleased)
+
+### Added
+
+- `ReceivedMintApi` (`receivedMint`): `getReceivedMint(recipientId, options?)`
+  returns the `ReceivedMint` (what the EVM lock of a received BFA mint has to
+  match: `opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`,
+  `bridgeContract`; u64 values as decimal strings) or `undefined`. Offline by
+  default; `ReceivedMintOptions.refreshIncoming` first refreshes pending
+  incoming transfers only.
+
+### Changed (breaking)
+
+- `AssetBfa.initialSupply` is optional: rgb-lib bfa.8 no longer reports it,
+  so `@utexo/rgb-sdk-rn` omits it. Use `knownCirculatingSupply`. Code that
+  reads `initialSupply` as a `number` must handle `undefined`.
+
+## 1.0.0-beta.10
 
 ### Added
 
@@ -18,12 +35,6 @@
   it has none). rgb-lib bfa.6 reports several. Optional, so engines that do
   not report change still conform.
 - `AssetBfa.knownCirculatingSupply` (optional).
-- `ReceivedMintApi` (`receivedMint`): `getReceivedMint(recipientId, options?)`
-  returns the `ReceivedMint` (what the EVM lock of a received BFA mint has to
-  match: `opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`,
-  `bridgeContract`; u64 values as decimal strings) or `undefined`. Offline by
-  default; `ReceivedMintOptions.refreshIncoming` first refreshes pending
-  incoming transfers only.
 
 ### Changed (breaking, unreleased contract)
 
@@ -33,9 +44,6 @@
 - `VssFenceApi.vssClearFence(password)` is now `clearVssFence({ password })`.
 - Conformance names: `backupExport`, `backupRestore`, `vssRestore`,
   `vssBackupInfo` are new. The legacy `IUTEXOProtocol` keeps its names.
-- `AssetBfa.initialSupply` is optional: rgb-lib bfa.8 no longer reports it,
-  so `@utexo/rgb-sdk-rn` omits it. Use `knownCirculatingSupply`. Code that
-  reads `initialSupply` as a `number` must handle `undefined`.
 
 ### Deprecated
 
