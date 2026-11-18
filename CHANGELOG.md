@@ -7,7 +7,8 @@
 - `ReceivedMintApi` (`receivedMint`): `getReceivedMint(recipientId, options?)`
   returns the `ReceivedMint` (what the EVM lock of a received BFA mint has to
   match: `opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`,
-  `bridgeContract`; u64 values as decimal strings) or `undefined`. Offline by
+  `bridgeContract`; u64 values as decimal strings; plus `assetId` when the
+  engine can read it from the checked consignment) or `undefined`. Offline by
   default; `ReceivedMintOptions.refreshIncoming` first refreshes pending
   incoming transfers only.
 

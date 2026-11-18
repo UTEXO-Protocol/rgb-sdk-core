@@ -81,7 +81,7 @@ runEngineConformanceChecks({
 });
 ```
 
-`ReceivedMintApi` (`receivedMint`) is for a wallet that receives BFA mints: `getReceivedMint(recipientId, { refreshIncoming })` returns the checked mint terms the EVM lock has to match (`opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`, `bridgeContract`; integers as decimal strings), or `undefined` while no checked mint is ready. `refreshIncoming: true` first refreshes the wallet's pending incoming transfers only.
+`ReceivedMintApi` (`receivedMint`) is for a wallet that receives BFA mints: `getReceivedMint(recipientId, { refreshIncoming })` returns the checked mint terms the EVM lock has to match (`opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`, `bridgeContract`; integers as decimal strings), plus `assetId` when the engine can read it from the checked consignment, or `undefined` while no checked mint is ready. `refreshIncoming: true` first refreshes the wallet's pending incoming transfers only.
 
 It uses the Jest or Vitest globals; with another runner, pass `describe`, `it` and `expect`.
 
