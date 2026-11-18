@@ -170,6 +170,11 @@ export interface BfaCapabilities {
  * checked the mint. u64 values are exact decimal strings.
  */
 export interface ReceivedMint {
+  /**
+   * Asset of the consignment the wallet checked for this mint. Absent when the
+   * engine cannot read it from that consignment.
+   */
+  assetId?: string;
   /** ID of the mint operation. */
   opid: string;
   /** ID the lock has to be made for (hex), committing to the mint operation and its TX. */
