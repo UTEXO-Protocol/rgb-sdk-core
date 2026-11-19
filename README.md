@@ -27,7 +27,7 @@ npm install @utexo/rgb-sdk-core
 
 | Area            | Exports                                                                                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BackupExportApi`, `BackupRestoreApi`, `VssBackupApi`, `VssRestoreApi`, `VssBackupInfoApi`, `VssFenceApi`, `BurnApi`, `ConsignmentApi`, …), `assertEngineContract` |
+| Engine contract | `SharedWalletApi`, extension interfaces (`RestartableWalletApi`, `FileBackupApi`, `BackupExportApi`, `BackupRestoreApi`, `VssBackupApi`, `VssRestoreApi`, `VssBackupInfoApi`, `VssFenceApi`, `BurnApi`, `ConsignmentApi`, `ReceivedMintApi`, …), `assertEngineContract` |
 | Errors          | `isEngineError`, `EngineContractError`, `SDKError` and subclasses (`ValidationError`, `CryptoError`, `NetworkError`, …)                   |
 | Keys            | `generateKeys`, `deriveKeysFromMnemonic`, `signMessage`, `verifyMessage`, PSBT and VSS helpers                                            |
 | Types           | wallet, asset, transfer and invoice models; network constants and default endpoints                                                       |
@@ -80,6 +80,8 @@ runEngineConformanceChecks({
   extensions: ['restartable', 'fileBackup'],
 });
 ```
+
+`ReceivedMintApi` (`receivedMint`) is for a wallet that receives BFA mints: `getReceivedMint(recipientId, { refreshIncoming })` returns the checked mint terms the EVM lock has to match (`opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`, `bridgeContract`; integers as decimal strings), plus `assetId` when the engine can read it from the checked consignment, or `undefined` while no checked mint is ready. `refreshIncoming: true` first refreshes the wallet's pending incoming transfers only.
 
 It uses the Jest or Vitest globals; with another runner, pass `describe`, `it` and `expect`.
 

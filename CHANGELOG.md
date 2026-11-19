@@ -1,6 +1,24 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta.11 (unreleased)
+
+### Added
+
+- `ReceivedMintApi` (`receivedMint`): `getReceivedMint(recipientId, options?)`
+  returns the `ReceivedMint` (what the EVM lock of a received BFA mint has to
+  match: `opid`, `lockId`, `amount`, `beforeBlock`, `evmChainId`,
+  `bridgeContract`; u64 values as decimal strings; plus `assetId` when the
+  engine can read it from the checked consignment) or `undefined`. Offline by
+  default; `ReceivedMintOptions.refreshIncoming` first refreshes pending
+  incoming transfers only.
+
+### Changed (breaking)
+
+- `AssetBfa.initialSupply` is optional: rgb-lib bfa.8 no longer reports it,
+  so `@utexo/rgb-sdk-rn` omits it. Use `knownCirculatingSupply`. Code that
+  reads `initialSupply` as a `number` must handle `undefined`.
+
+## 1.0.0-beta.10
 
 ### Added
 

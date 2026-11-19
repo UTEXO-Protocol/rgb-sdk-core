@@ -19,6 +19,8 @@ import type {
   IssueAssetCfaParams,
   IssueAssetUdaParams,
   ReadOptions,
+  ReceivedMint,
+  ReceivedMintOptions,
   WalletTransfer,
 } from '../../types/engine-model';
 import type {
@@ -146,6 +148,24 @@ export interface MessageSigningApi {
 export interface IndexerCheckApi {
   /** Detects the indexer protocol behind `url`. */
   checkIndexerUrl(url: string): Promise<IndexerUrlInfo>;
+}
+
+/**
+ * The checked BFA mint received on a recipient ID. It reads what the wallet
+ * recorded when it checked the mint; offline unless `refreshIncoming` is set.
+ */
+export interface ReceivedMintApi {
+  /**
+   * The lock details of the mint paying `recipientId`, or `undefined` when no
+   * mint checked by the wallet pays it (not received or checked yet, refused
+   * or failed: check the transfer status to tell them apart). `recipientId`
+   * must be exactly as the wallet returned it. Checking a mint needs the EVM
+   * RPC endpoint of its chain in the online options.
+   */
+  getReceivedMint(
+    recipientId: string,
+    options?: ReceivedMintOptions
+  ): Promise<ReceivedMint | undefined>;
 }
 
 /** Contract metadata of one asset. */
